@@ -1,6 +1,11 @@
 .streamlit/secrets.toml
 *.pyc
 __pycache__/
+.codex/
+public_reports/
+streamlit_start.out
+streamlit_start.err
+jurisdiction_data/temp_tiger_states/
 cell_coverage/raw/
 regulatory_layers/*.parquet
 DOF_Public.csv
