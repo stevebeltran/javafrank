@@ -2857,7 +2857,7 @@ def _build_unit_cards_html(active_drones, text_main, text_muted, card_bg, card_b
 
                 f'<div style="display:flex;align-items:center;gap:5px;margin-top:6px;padding-top:5px;border-top:1px solid rgba(220,53,69,0.3);">'
 
-                f'<span style="font-size:0.60rem;color:#dc3545;font-weight:700;">⚠️ Maxed capacity</span>'
+                f'<span style="font-size:0.60rem;color:#F0B429;font-weight:700;">⚠️ Maxed capacity</span>'
 
                 f'<span style="font-size:0.59rem;color:{text_muted};">· {d_unserv_day:.0f} calls/day unserviceable</span></div>'
 
@@ -2872,7 +2872,7 @@ def _build_unit_cards_html(active_drones, text_main, text_muted, card_bg, card_b
             )
 
             cards_html.append(f'''
-<div class="unit-card" style="background:{card_bg};border:1px solid {"#dc3545" if d_capacity_limited else card_border};border-top:3px solid {d_color};border-radius:8px;padding:10px 12px;box-sizing:border-box;">
+<div class="unit-card" style="background:{card_bg};border:1px solid {"#F0B429" if d_capacity_limited else card_border};border-top:3px solid {d_color};border-radius:8px;padding:10px 12px;box-sizing:border-box;">
   <div style="display:flex; align-items:baseline; gap:5px; overflow:hidden;">
     <span style="font-weight:700; font-size:0.78rem; color:{card_title}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0;">{"🔒 " if d.get("pinned") else ""}{d["name"]}</span>
     <span style="font-size:0.58rem; color:#666; text-transform:uppercase; letter-spacing:0.3px; white-space:nowrap; flex-shrink:0;">{d_type} · #{d_step}</span><span style="font-size:0.56rem;color:{status_color};background:{status_bg};border:1px solid {status_border};border-radius:999px;padding:2px 7px;font-weight:700;white-space:nowrap;">{status_text}</span>
@@ -2894,7 +2894,7 @@ def _build_unit_cards_html(active_drones, text_main, text_muted, card_bg, card_b
       <div style="font-size:0.57rem;color:{text_muted};text-transform:uppercase;letter-spacing:0.3px;">Calls Unanswered<span class="tip" data-tip="Raw in-range calls that remain unhandled after the station's physical time limit is applied.">?</span></div>
       <div style="font-size:0.88rem;font-weight:800;color:{"#dc3545" if d_calls_unanswered_yr > 0.1 else card_title};">{int(d_calls_unanswered_yr):,}</div>
     </div>
-    <div style="background:{"rgba(220,53,69,0.08)" if d_capacity_limited else "rgba(255,255,255,0.04)"};border:1px solid {"#dc3545" if d_capacity_limited else card_border};border-radius:5px;padding:6px 8px;text-align:center;">
+    <div style="background:{"rgba(240,180,41,0.08)" if d_capacity_limited else "rgba(255,255,255,0.04)"};border:1px solid {"#F0B429" if d_capacity_limited else card_border};border-radius:5px;padding:6px 8px;text-align:center;">
       <div style="font-size:0.57rem;color:{text_muted};text-transform:uppercase;letter-spacing:0.3px;">Utilization<span class="tip" data-tip="Dispatchable calls in range as a percent of this unit's daily call-handling capacity using the 10-minute on-scene floor model. If any dispatchable calls are unanswered, utilization is shown as 100%.">?</span></div>
       <div style="font-size:0.88rem;font-weight:800;color:{util_color};">{util_pct}</div>
     </div>
@@ -2932,7 +2932,7 @@ def _build_unit_cards_html(active_drones, text_main, text_muted, card_bg, card_b
 
 
         cards_html.append(f'''
-<div class="unit-card" style="background:{card_bg}; border:1px solid {"#dc3545" if d_capacity_limited else card_border}; border-top:3px solid {d_color}; border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; box-sizing:border-box;">
+<div class="unit-card" style="background:{card_bg}; border:1px solid {"#F0B429" if d_capacity_limited else card_border}; border-top:3px solid {d_color}; border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; box-sizing:border-box;">
   <!-- Header: single compact row -->
   <div style="margin-bottom:5px; flex-shrink:0;">
     <div style="display:flex; align-items:baseline; gap:5px; overflow:hidden;">
@@ -2953,10 +2953,10 @@ def _build_unit_cards_html(active_drones, text_main, text_muted, card_bg, card_b
     </div>
     <div style="background:rgba(255,255,255,0.04); border:1px solid {card_border}; border-radius:5px; padding:5px 7px;">
       <div style="color:{text_muted}; font-size:0.60rem; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:1px;">Dispatchable Calls<span class="tip" data-tip="Raw calls in range multiplied by the drone dispatch rate. This is total drone demand inside the unit's physical coverage area before overlap sharing.">?</span></div>
-      <div style="font-weight:800; color:{"#dc3545" if d_capacity_limited else "#2ecc71"}; font-size:0.82rem;">{int(d_dispatchable_calls_yr):,}</div>
+      <div style="font-weight:800; color:{"#F0B429" if d_capacity_limited else "#2ecc71"}; font-size:0.82rem;">{int(d_dispatchable_calls_yr):,}</div>
       <div style="font-size:0.59rem; color:{text_muted};">{(d_dispatchable_calls_yr / 365.0):.1f}/day</div>
     </div>
-    <div style="background:{"rgba(220,53,69,0.08)" if d_capacity_limited else "rgba(255,255,255,0.04)"}; border:1px solid {"#dc3545" if d_capacity_limited else card_border}; border-radius:5px; padding:5px 7px;">
+    <div style="background:{"rgba(240,180,41,0.08)" if d_capacity_limited else "rgba(255,255,255,0.04)"}; border:1px solid {"#F0B429" if d_capacity_limited else card_border}; border-radius:5px; padding:5px 7px;">
       <div style="color:{text_muted}; font-size:0.60rem; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:1px;">Utilization<span class="tip" data-tip="Dispatchable calls in range as a percent of this unit's daily call-handling capacity using the 10-minute on-scene floor model. If any dispatchable calls are unanswered, utilization is shown as 100%.">?</span></div>
       <div style="font-weight:800; color:{util_color}; font-size:0.82rem;">{util_pct}</div>
     </div>
@@ -2978,22 +2978,22 @@ def _build_unit_cards_html(active_drones, text_main, text_muted, card_bg, card_b
     </div>
   </div>
   {_full_fin_capex_roi}
-  { (f'<div style="border-top:1px solid rgba(220,53,69,0.35);margin-top:4px;padding-top:5px;">'  
-      f'<div style="font-size:0.62rem;font-weight:800;color:#dc3545;margin-bottom:3px;">⚠️ MAXED CAPACITY<span class="tip" data-tip="This unit''s attributed demand exceeds its modeled physical capacity under the current mission profile and on-scene time assumption.">?</span> · {min(d_on_scene, 10.0):.1f} min on-scene floor<span class="tip" data-tip="Capacity is modeled with at least this many minutes spent on scene per dispatch before the drone can clear and recharge.">?</span></div>'  
+   { (f'<div style="border-top:1px solid rgba(240,180,41,0.35);margin-top:4px;padding-top:5px;">'  
+      f'<div style="font-size:0.62rem;font-weight:800;color:#F0B429;margin-bottom:3px;">⚠️ MAXED CAPACITY<span class="tip" data-tip="This unit''s attributed demand exceeds its modeled physical capacity under the current mission profile and on-scene time assumption.">?</span> · {min(d_on_scene, 10.0):.1f} min on-scene floor<span class="tip" data-tip="Capacity is modeled with at least this many minutes spent on scene per dispatch before the drone can clear and recharge.">?</span></div>'  
        f'<div style="font-size:0.59rem;color:{text_muted};margin-bottom:4px;">{d_unserv_day:.0f} calls/day unserviceable · {d_unserv_yr:,.0f}/yr</div>'  
        f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:4px;">'  
-       f'<div style="background:rgba(220,53,69,0.08);border:1px solid rgba(220,53,69,0.2);border-radius:4px;padding:3px 6px;font-size:0.59rem;">'  
+        f'<div style="background:rgba(240,180,41,0.08);border:1px solid rgba(240,180,41,0.2);border-radius:4px;padding:3px 6px;font-size:0.59rem;">'  
       f'<div style="color:{text_muted};">Total Flights Possible<span class="tip" data-tip="Maximum annual dispatches this unit can physically fly under the modeled duty cycle, recharge time, and on-scene floor.">?</span></div>'  
        f'<div style="font-weight:700;color:{card_title};">{d_total_flights_possible_yr:,.0f}/yr</div></div>'  
-       f'<div style="background:rgba(220,53,69,0.08);border:1px solid rgba(220,53,69,0.2);border-radius:4px;padding:3px 6px;font-size:0.59rem;">'  
+        f'<div style="background:rgba(240,180,41,0.08);border:1px solid rgba(240,180,41,0.2);border-radius:4px;padding:3px 6px;font-size:0.59rem;">'  
       f'<div style="color:{text_muted};">Uncovered Flights<span class="tip" data-tip="Annual dispatch demand in this unit''s zone that remains unserved because it exceeds physical capacity.">?</span></div>'  
-       f'<div style="font-weight:700;color:#dc3545;">{d_total_uncovered_flights_yr:,.0f}/yr</div></div>'  
+       f'<div style="font-weight:700;color:#F0B429;">{d_total_uncovered_flights_yr:,.0f}/yr</div></div>'  
        f'</div>'  
        f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;">'  
-       f'<div style="background:rgba(220,53,69,0.08);border:1px solid rgba(220,53,69,0.2);border-radius:4px;padding:3px 6px;font-size:0.59rem;">'  
+        f'<div style="background:rgba(240,180,41,0.08);border:1px solid rgba(240,180,41,0.2);border-radius:4px;padding:3px 6px;font-size:0.59rem;">'  
       f'<div style="color:{text_muted};">+{d_extra_same} {d_same_lbl}<span class="tip" data-tip="Estimated number of additional same-type drones needed to absorb this unit''s excess demand under the current model.">?</span></div>'  
        f'<div style="font-weight:700;color:#F0B429;">{_sc_fmt}</div></div>'  
-       f'<div style="background:rgba(220,53,69,0.08);border:1px solid rgba(220,53,69,0.2);border-radius:4px;padding:3px 6px;font-size:0.59rem;">'  
+        f'<div style="background:rgba(240,180,41,0.08);border:1px solid rgba(240,180,41,0.2);border-radius:4px;padding:3px 6px;font-size:0.59rem;">'  
       f'<div style="color:{text_muted};">+{d_extra_alt} {d_alt_lbl}<span class="tip" data-tip="Estimated number of additional alternate-type drones needed to absorb this unit''s excess demand under the current model.">?</span></div>'  
        f'<div style="font-weight:700;color:#F0B429;">{_ac_fmt}</div></div>'  
        f'</div></div>')  
