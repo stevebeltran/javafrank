@@ -6303,10 +6303,19 @@ body{{background:transparent;overflow:hidden}}
                 # Determine if this is an extended Guardian (so we can relax the outer ring)
                 is_extended_guardian = (d['type'] == 'GUARDIAN' and d['radius_m']/1609.34 > 5.0)
 
-                # The outer ring becomes relaxed (thinner, more transparent) if > 5 miles
-                outer_width = 1.5 if is_extended_guardian else 4.5
-                outer_opac = 0.4 if is_extended_guardian else 1.0
+                # Keep the extended Guardian ring visible on darker basemaps.
+                outer_width = 4.0 if is_extended_guardian else 4.5
+                outer_opac = 0.95 if is_extended_guardian else 1.0
 
+                if is_extended_guardian:
+                    fig.add_trace(go.Scattermap(
+                        lat=list(clats)+[None,d['lat']], lon=list(clons)+[None,d['lon']],
+                        mode='lines',
+                        opacity=0.45,
+                        line=dict(color='rgba(255,255,255,0.35)', width=8.0),
+                        fill='toself', fillcolor='rgba(0,0,0,0)',
+                        name=lbl, hoverinfo='skip', showlegend=False
+                    ))
                 fig.add_trace(go.Scattermap(
                     lat=list(clats)+[None,d['lat']], lon=list(clons)+[None,d['lon']],
                     mode='lines+markers',
