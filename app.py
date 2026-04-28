@@ -5721,6 +5721,12 @@ body{{background:transparent;overflow:hidden}}
                     (_budget_min / max(_zone_flights, 0.001)) - _travel_cost if _zone_flights > 0 else _max_on_scene,
                     _max_on_scene,
                 )
+                _alt_flight_endurance = CONFIG["GUARDIAN_FLIGHT_MIN"] if _alt_is_guard else CONFIG["RESPONDER_FLIGHT_MIN"]
+                _alt_max_on_scene = max(0.0, _alt_flight_endurance - _alt_travel_cost)
+                _alt_on_scene_min = min(
+                    (_alt_budget / max(_zone_flights, 0.001)) - _alt_travel_cost if _zone_flights > 0 else _alt_max_on_scene,
+                    _alt_max_on_scene,
+                )
 
                 _raw_calls_in_range_day = _raw_zone_calls / 365.0
                 _dispatchable_calls_day = _raw_calls_in_range_day * _effective_dfr
@@ -5741,11 +5747,18 @@ body{{background:transparent;overflow:hidden}}
                 _true_util = _call_capacity_util
                 _util = min(1.0, _true_util)
 
+                # ── ANNUAL CAPACITY VALUE: directly tied to handled calls ────────
+                _cost_delta        = CONFIG["OFFICER_COST_PER_CALL"] - CONFIG["DRONE_COST_PER_CALL"]
+                _handled_calls_day = min(_weighted_dispatchable_calls_day, _max_flights_cap)
+                _handled_calls_yr  = _handled_calls_day * 365.0
+                _unserv_calls_day = max(0.0, _raw_calls_in_range_day - _handled_calls_day)
+                _unserv_calls_yr  = _unserv_calls_day * 365
+                _deflected_calls_day = _handled_calls_day * deflection_rate
+                _deflected_calls_yr  = _handled_calls_yr * deflection_rate
+
                 # Deficit: overlap-weighted dispatchable calls demanded beyond physical capacity
                 _deficit_flights  = max(0.0, _weighted_dispatchable_calls_day - _max_flights_cap)
                 _has_deficit      = _deficit_flights > 0.01
-                _unserv_calls_day = _deficit_flights if _has_deficit else 0.0
-                _unserv_calls_yr  = _unserv_calls_day * 365
 
                 # Extra stations needed to clear deficit (same type and alternate type)
                 _extra_same = int(math.ceil(_deficit_flights / _max_flights_cap)) if (_has_deficit and _max_flights_cap > 0) else 0
@@ -5758,13 +5771,6 @@ body{{background:transparent;overflow:hidden}}
                 _extra_alt_capex  = _extra_alt  * _alt_type_cost
                 _same_type_label  = "Guardian"  if _is_guard else "Responder"
                 _alt_type_label   = "Responder" if _is_guard else "Guardian"
-
-                # ── ANNUAL CAPACITY VALUE: directly tied to handled calls ────────
-                _cost_delta        = CONFIG["OFFICER_COST_PER_CALL"] - CONFIG["DRONE_COST_PER_CALL"]
-                _handled_calls_day = min(_weighted_dispatchable_calls_day, _max_flights_cap)
-                _handled_calls_yr  = _handled_calls_day * 365.0
-                _deflected_calls_day = _handled_calls_day * deflection_rate
-                _deflected_calls_yr  = _handled_calls_yr * deflection_rate
                 # Exclusive share derived from zone call counts (stable under any
                 # capacity cap — both numerator and denominator scale identically).
                 if _weighted_zone_calls > 0:
@@ -5809,12 +5815,12 @@ body{{background:transparent;overflow:hidden}}
                 d['zone_flights']        = _zone_flights
                 d['zone_calls_annual']   = _weighted_zone_calls * 365.0 / 365.0
                 d['raw_zone_calls_annual'] = _raw_zone_calls
-                d['city_calls_day']      = total_calls / 365.0 if total_calls > 0 else 0.0
-                d['city_calls_yr']       = float(total_calls)
                 d['zone_flights_annual'] = _zone_flights * 365.0
                 d['utilization']         = _util
                 d['true_util']           = _true_util
                 d['on_scene_min']        = _on_scene_min
+                d['alt_on_scene_min']    = _alt_on_scene_min
+                d['loiter_vs_other_min'] = _on_scene_min - _alt_on_scene_min
                 d['max_flights_cap']     = _max_flights_cap
                 d['effective_dfr_rate']  = _effective_dfr
                 d['has_deficit']         = _has_deficit
