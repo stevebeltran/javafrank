@@ -2531,7 +2531,7 @@ def _build_unit_cards_html(active_drones, text_main, text_muted, card_bg, card_b
                 f'<div style="font-size:0.58rem;color:{text_muted};text-transform:uppercase;letter-spacing:0.3px;text-align:right;">Loiter advantage'
                 f'<span class="tip" data-tip="Signed loiter difference versus the other drone type at the same station. Positive means the current unit can stay on scene longer.">?</span></div>'
                 f'<div style="font-size:0.78rem;font-weight:800;color:{loiter_color};text-align:right;line-height:1.1;">{loiter_compare_text}</div>'
-                f'<div style="font-size:0.58rem;color:{text_muted};text-align:right;margin-top:1px;">Same station · travel-adjusted</div>'
+                f'<div style="font-size:0.58rem;color:{text_muted};text-align:right;margin-top:1px;">Same station &middot; travel-adjusted</div>'
                 f'</div>'
             )
 
@@ -2613,33 +2613,35 @@ def _build_unit_cards_html(active_drones, text_main, text_muted, card_bg, card_b
 
             f'        <div style="font-size:0.58rem;color:{text_muted};text-transform:uppercase;letter-spacing:0.3px;margin-bottom:3px;">Handled / Attributed<span class="tip" data-tip="Handled is the annual dispatchable call volume this unit can physically serve after capacity limits. Attributed is the annual dispatchable demand credited to this unit after overlap is shared across covering drones.">?</span></div>'
 
-            f'        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:2px;">'
-
-            f'          <div style="background:rgba(255,255,255,0.04);border:1px solid {card_border};border-radius:6px;padding:6px 8px;text-align:center;">'
-
-            f'            <div style="font-size:0.56rem;color:{text_muted};text-transform:uppercase;letter-spacing:0.3px;margin-bottom:2px;">Handled</div>'
-
-            f'            <div style="font-size:1.05rem;font-weight:900;color:{card_title};line-height:1.05;">{int(d_calls_handle_yr):,}</div>'
-
-            f'          </div>'
-
-            f'          <div style="background:rgba(255,255,255,0.04);border:1px solid {card_border};border-radius:6px;padding:6px 8px;text-align:center;">'
-
-            f'            <div style="font-size:0.56rem;color:{text_muted};text-transform:uppercase;letter-spacing:0.3px;margin-bottom:2px;">Attributed</div>'
-
-            f'            <div style="font-size:1.05rem;font-weight:900;color:{card_title};line-height:1.05;">{int(d_weighted_dispatchable_calls_yr):,}</div>'
-
-            f'          </div>'
-
-            f'        </div>'
-
-            f'        <div style="font-size:0.60rem;color:{status_color};font-weight:700;margin-top:3px;">{status_text}</div>'
-
-            f'        <div style="font-size:0.58rem;color:{text_muted};margin-top:2px;">{status_subtext}</div>'
+            f'        <div style="font-size:1.30rem;font-weight:900;color:{card_title};line-height:1.05;">{int(d_calls_handle_yr):,} / {int(d_weighted_dispatchable_calls_yr):,}</div>'
 
             f'      </div>'
 
-            f'      <div style="min-width:96px;">{patrol_time_line}</div>'
+            f'      <div style="min-width:138px;">'
+
+            f'        <div style="background:rgba(255,255,255,0.04);border:1px solid {card_border};border-radius:6px;padding:6px 8px;">'
+
+            f'          <div style="font-size:0.56rem;color:{text_muted};text-transform:uppercase;letter-spacing:0.3px;margin-bottom:3px;">At Capacity<span class="tip" data-tip="This unit is at its modeled call-handling ceiling for the current profile.">?</span></div>'
+
+            f'          <div style="font-size:0.72rem;font-weight:800;color:{card_title};line-height:1.2;margin-top:3px;">{int(d_calls_unanswered_yr):,} calls unanswered</div>'
+
+            f'          <div style="font-size:0.70rem;color:{text_muted};margin-top:2px;">{d_max_cap:.1f} calls/day capacity ({int(d_total_flights_possible_yr):,}/yr)</div>'
+
+            f'          <div style="font-size:0.70rem;color:{text_muted};margin-top:2px;">{mins_per_flight:.1f} min/flight</div>'
+
+            f'        </div>'
+
+            f'        <div style="background:rgba(255,255,255,0.04);border:1px solid {card_border};border-radius:6px;padding:6px 8px;margin-top:6px;">'
+
+            f'          <div style="font-size:0.56rem;color:{text_muted};text-transform:uppercase;letter-spacing:0.3px;margin-bottom:3px;">Loiter advantage<span class="tip" data-tip="Signed loiter difference versus the other drone type at the same station. Positive means the current unit can stay on scene longer.">?</span></div>'
+
+            f'          <div style="font-size:0.82rem;font-weight:900;color:{loiter_color};line-height:1.1;">{loiter_compare_text}</div>'
+
+            f'          <div style="font-size:0.56rem;color:{text_muted};margin-top:2px;">Same station &middot; travel-adjusted</div>'
+
+            f'        </div>'
+
+            f'      </div>'
 
             f'    </div>'
 
@@ -2747,33 +2749,35 @@ def _build_unit_cards_html(active_drones, text_main, text_muted, card_bg, card_b
 
             f'        <div style="font-size:0.68rem; color:{text_muted}; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">Handled / Attributed<span class="tip" data-tip="Handled is the annual dispatchable call volume this unit can physically serve after capacity limits. Attributed is the annual dispatchable demand credited to this unit after overlap is shared across covering drones.">?</span></div>'
 
-            f'        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:2px;">'
-
-            f'          <div style="background:rgba(255,255,255,0.04); border:1px solid {card_border}; border-radius:6px; padding:6px 8px; text-align:center;">'
-
-            f'            <div style="font-size:0.56rem; color:{text_muted}; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:2px;">Handled</div>'
-
-            f'            <div style="font-size:1.00rem; font-weight:900; color:{card_title}; line-height:1.05;">{int(d_calls_handle_yr):,}</div>'
-
-            f'          </div>'
-
-            f'          <div style="background:rgba(255,255,255,0.04); border:1px solid {card_border}; border-radius:6px; padding:6px 8px; text-align:center;">'
-
-            f'            <div style="font-size:0.56rem; color:{text_muted}; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:2px;">Attributed</div>'
-
-            f'            <div style="font-size:1.00rem; font-weight:900; color:{card_title}; line-height:1.05;">{int(d_weighted_dispatchable_calls_yr):,}</div>'
-
-            f'          </div>'
-
-            f'        </div>'
-
-            f'        <div style="font-size:0.62rem; color:{status_color}; font-weight:800; margin-top:4px;">{status_text}</div>'
-
-            f'        <div style="font-size:0.59rem; color:{text_muted}; margin-top:2px;">{status_subtext}</div>'
+            f'        <div style="font-size:1.35rem; font-weight:900; color:{card_title}; line-height:1.05;">{int(d_calls_handle_yr):,} / {int(d_weighted_dispatchable_calls_yr):,}</div>'
 
             f'      </div>'
 
-            f'      <div style="min-width:96px;">{patrol_time_line}</div>'
+            f'      <div style="min-width:138px;">'
+
+            f'        <div style="background:rgba(255,255,255,0.04); border:1px solid {card_border}; border-radius:6px; padding:6px 8px;">'
+
+            f'          <div style="font-size:0.56rem; color:{text_muted}; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:3px;">At Capacity<span class="tip" data-tip="This unit is at its modeled call-handling ceiling for the current profile.">?</span></div>'
+
+            f'          <div style="font-size:0.72rem; font-weight:800; color:{card_title}; line-height:1.2; margin-top:3px;">{int(d_calls_unanswered_yr):,} calls unanswered</div>'
+
+            f'          <div style="font-size:0.70rem; color:{text_muted}; margin-top:2px;">{d_max_cap:.1f} calls/day capacity ({int(d_total_flights_possible_yr):,}/yr)</div>'
+
+            f'          <div style="font-size:0.70rem; color:{text_muted}; margin-top:2px;">{mins_per_flight:.1f} min/flight</div>'
+
+            f'        </div>'
+
+            f'        <div style="background:rgba(255,255,255,0.04); border:1px solid {card_border}; border-radius:6px; padding:6px 8px; margin-top:6px;">'
+
+            f'          <div style="font-size:0.56rem; color:{text_muted}; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:3px;">Loiter advantage<span class="tip" data-tip="Signed loiter difference versus the other drone type at the same station. Positive means the current unit can stay on scene longer.">?</span></div>'
+
+            f'          <div style="font-size:0.82rem; font-weight:900; color:{loiter_color}; line-height:1.1;">{loiter_compare_text}</div>'
+
+            f'          <div style="font-size:0.56rem; color:{text_muted}; margin-top:2px;">Same station &middot; travel-adjusted</div>'
+
+            f'        </div>'
+
+            f'      </div>'
 
             f'    </div>'
 
@@ -5392,6 +5396,7 @@ if (stations.length === 0) {{
 </html>"""
 
     return html
+
 
 
 
