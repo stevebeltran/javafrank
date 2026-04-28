@@ -2539,8 +2539,6 @@ def _build_unit_cards_html(active_drones, text_main, text_muted, card_bg, card_b
 
             status_text = "At Capacity"
 
-            status_subtext = f"{int(d_calls_unanswered_yr):,} calls unanswered"
-
             status_bg = "rgba(220,53,69,0.10)"
 
             status_border = "rgba(220,53,69,0.35)"
@@ -2550,8 +2548,6 @@ def _build_unit_cards_html(active_drones, text_main, text_muted, card_bg, card_b
         else:
 
             status_text = "Within Capacity"
-
-            status_subtext = f"{int(d_calls_handle_yr):,} annual call capacity"
 
             status_bg = "rgba(46,204,113,0.10)"
 
