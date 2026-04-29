@@ -234,6 +234,7 @@ def _reset_census_state(session_state):
     session_state['census_stage_df'] = None
     session_state['census_original_df'] = None
     session_state['census_partial_calls_df'] = None
+    session_state['_census_batch_started_at'] = None
     session_state['census_batch_zip_bytes'] = b""
     session_state['census_batch_zip_name'] = ""
     session_state['census_sample_bytes'] = b""
@@ -4181,13 +4182,41 @@ def main():
                                 )
 
                                 census_chunks = make_census_batch_chunks(census_stage_df, chunk_size=5000)
+                                census_timeout_sec = 180
+                                census_retries = 3
+                                census_stall_warn_sec = 600
+                                census_started_at = st.session_state.get('_census_batch_started_at')
+                                if not isinstance(census_started_at, (int, float)):
+                                    census_started_at = time.time()
+                                    st.session_state['_census_batch_started_at'] = census_started_at
+
+                                def _format_wait(seconds):
+                                    seconds = max(0, int(seconds))
+                                    mins, secs = divmod(seconds, 60)
+                                    return f"{mins}m {secs:02d}s" if mins else f"{secs}s"
+
+                                theoretical_max_wait = (
+                                    census_timeout_sec * census_retries
+                                    + sum(min(6, attempt * 2) for attempt in range(1, census_retries))
+                                )
                                 _push_upload_log(
                                     f"Prepared {int(census_summary.get('rows_ready', 0) or 0):,} Census-ready rows across {len(census_chunks)} Census chunk(s)."
+                                )
+                                _push_upload_log(
+                                    "Census wait guidance: each POST waits up to "
+                                    f"{census_timeout_sec}s, total worst-case per chunk is about "
+                                    f"{_format_wait(theoretical_max_wait)}, and a chunk that still has not completed after "
+                                    f"{_format_wait(census_stall_warn_sec)} should be treated as stalled."
                                 )
                                 _set_upload_overlay_status(
                                     title="CENSUS AUTOMATION",
                                     status="SUBMITTING BATCHES",
-                                    copy="Sending chunked address batches directly to the Census geocoder. The bar will stay near 42% until a chunk returns, and retry notes will appear below.",
+                                    copy=(
+                                        "Sending chunked address batches directly to the Census geocoder. "
+                                        f"Elapsed since Census submit started: {_format_wait(time.time() - census_started_at)}. "
+                                        f"Each attempt can wait up to {_format_wait(census_timeout_sec)}; a healthy worst-case per chunk is about {_format_wait(theoretical_max_wait)}. "
+                                        f"If the same chunk is still waiting after {_format_wait(census_stall_warn_sec)}, treat it as stalled and cancel/retry."
+                                    ),
                                     progress=42,
                                     logs=_upload_logs,
                                 )
@@ -4205,7 +4234,11 @@ def main():
                                     _set_upload_overlay_status(
                                         title="CENSUS AUTOMATION",
                                         status=f"SUBMITTING CHUNK {chunk_idx} OF {total_chunks}",
-                                        copy="Waiting for the Census batch endpoint to return the geocoded CSV for this chunk. This can take several minutes for a large batch.",
+                                        copy=(
+                                            f"Waiting for the Census batch endpoint to return the geocoded CSV for chunk {chunk_idx} of {total_chunks}. "
+                                            f"Elapsed since Census submit started: {_format_wait(time.time() - census_started_at)}. "
+                                            f"If nothing returns after {_format_wait(census_stall_warn_sec)}, it is probably stalled."
+                                        ),
                                         progress=42 + int(completed_chunks / max(1, total_chunks) * 34),
                                         logs=_upload_logs,
                                     )
@@ -4213,8 +4246,24 @@ def main():
                                         chunk_result_df, _chunk_resp = submit_census_batch_chunk(
                                             chunk['csv_bytes'],
                                             chunk['filename'],
+                                            timeout=census_timeout_sec,
+                                            retries=census_retries,
                                             attempt_logger=_push_upload_log,
                                         )
+                                    except TypeError as exc:
+                                        if "unexpected keyword argument 'attempt_logger'" in str(exc):
+                                            _push_upload_log(
+                                                "Live Census module is still using the older submit_census_batch_chunk signature; "
+                                                "retrying without per-attempt logs."
+                                            )
+                                            chunk_result_df, _chunk_resp = submit_census_batch_chunk(
+                                                chunk['csv_bytes'],
+                                                chunk['filename'],
+                                                timeout=census_timeout_sec,
+                                                retries=census_retries,
+                                            )
+                                        else:
+                                            raise
                                     except Exception as exc:
                                         if chunk['rows'] > 1000 and chunk.get('frame') is not None:
                                             _push_upload_log(
@@ -4279,7 +4328,10 @@ def main():
                                 _set_upload_overlay_status(
                                     title="CENSUS AUTOMATION",
                                     status="MERGING RESULTS",
-                                    copy="Combining all Census chunk responses and restoring coordinates into the original dataset.",
+                                    copy=(
+                                        f"Combining all Census chunk responses and restoring coordinates into the original dataset. "
+                                        f"Total Census wait so far: {_format_wait(time.time() - census_started_at)}."
+                                    ),
                                     progress=80,
                                     logs=_upload_logs,
                                 )
@@ -4318,7 +4370,10 @@ def main():
                                 _set_upload_overlay_status(
                                     title="CENSUS AUTOMATION",
                                     status="GEOCODING COMPLETE",
-                                    copy="Coordinates restored. Finalizing station discovery and jurisdiction setup now.",
+                                    copy=(
+                                        f"Coordinates restored. Finalizing station discovery and jurisdiction setup now. "
+                                        f"Total Census time: {_format_wait(time.time() - census_started_at)}."
+                                    ),
                                     progress=88,
                                     logs=_upload_logs,
                                 )
