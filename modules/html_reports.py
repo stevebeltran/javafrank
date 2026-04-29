@@ -2298,13 +2298,23 @@ def _build_unit_cards_html(active_drones, text_main, text_muted, card_bg, card_b
 
         max_patrol_hours = _GUARDIAN_DAILY_HOURS if is_guardian else _RESPONDER_DAILY_HOURS
         max_single_flight = CONFIG["GUARDIAN_FLIGHT_MIN"] if is_guardian else CONFIG["RESPONDER_FLIGHT_MIN"]
-        loiter_vs_other_min = float(d.get("loiter_vs_other_min", 0) or 0)
-        loiter_compare_text = (
-            f"+{abs(loiter_vs_other_min):.1f} min over Responder"
-            if is_guardian
-            else f"-{abs(loiter_vs_other_min):.1f} min compared to Guardian"
-        )
-        loiter_color = "#F0B429" if is_guardian else "#00D2FF"
+        d_alt_time = float(d.get("alt_avg_time_min", 0) or 0)
+        travel_delta_min = abs(d_time - d_alt_time)
+        current_label = "Guardian" if is_guardian else "Responder"
+        other_label = "Responder" if is_guardian else "Guardian"
+        if d_alt_time > 0 and travel_delta_min > 0.05:
+            if d_time <= d_alt_time:
+                travel_compare_text = f"{current_label} faster by {travel_delta_min:.1f} min"
+                travel_detail_text = f"{current_label} {d_time:.1f} min vs {other_label} {d_alt_time:.1f} min"
+                travel_color = "#2ecc71"
+            else:
+                travel_compare_text = f"{other_label} faster by {travel_delta_min:.1f} min"
+                travel_detail_text = f"{current_label} {d_time:.1f} min vs {other_label} {d_alt_time:.1f} min"
+                travel_color = "#F0B429"
+        else:
+            travel_compare_text = f"{current_label} arrival time"
+            travel_detail_text = f"{current_label} {d_time:.1f} min"
+            travel_color = "#00D2FF"
 
 
 
@@ -2528,10 +2538,10 @@ def _build_unit_cards_html(active_drones, text_main, text_muted, card_bg, card_b
             )
             patrol_time_line += (
                 f'<div style="margin-top:4px;padding-top:4px;border-top:1px dashed rgba(255,255,255,0.08);">'
-                f'<div style="font-size:0.58rem;color:{text_muted};text-transform:uppercase;letter-spacing:0.3px;text-align:right;">Loiter advantage'
-                f'<span class="tip" data-tip="Signed loiter difference versus the other drone type at the same station. Positive means the current unit can stay on scene longer.">?</span></div>'
-                f'<div style="font-size:0.78rem;font-weight:800;color:{loiter_color};text-align:right;line-height:1.1;">{loiter_compare_text}</div>'
-                f'<div style="font-size:0.58rem;color:{text_muted};text-align:right;margin-top:1px;">Same station &middot; travel-adjusted</div>'
+                f'<div style="font-size:0.58rem;color:{text_muted};text-transform:uppercase;letter-spacing:0.3px;text-align:right;">Arrival advantage'
+                f'<span class="tip" data-tip="Average station-to-call travel time compared between Guardian and Responder at the same station. The faster unit arrives first.">?</span></div>'
+                f'<div style="font-size:0.78rem;font-weight:800;color:{travel_color};text-align:right;line-height:1.1;">{travel_compare_text}</div>'
+                f'<div style="font-size:0.58rem;color:{text_muted};text-align:right;margin-top:1px;">{travel_detail_text}</div>'
                 f'</div>'
             )
 
@@ -2627,11 +2637,11 @@ def _build_unit_cards_html(active_drones, text_main, text_muted, card_bg, card_b
 
             f'        <div style="background:rgba(255,255,255,0.04);border:1px solid {card_border};border-radius:6px;padding:6px 8px;margin-top:6px;">'
 
-            f'          <div style="font-size:0.56rem;color:{text_muted};text-transform:uppercase;letter-spacing:0.3px;margin-bottom:3px;">Loiter advantage<span class="tip" data-tip="Signed loiter difference versus the other drone type at the same station. Positive means the current unit can stay on scene longer.">?</span></div>'
+            f'          <div style="font-size:0.56rem;color:{text_muted};text-transform:uppercase;letter-spacing:0.3px;margin-bottom:3px;">Arrival advantage<span class="tip" data-tip="Average station-to-call travel time compared between Guardian and Responder at the same station. The faster unit arrives first.">?</span></div>'
 
-            f'          <div style="font-size:0.82rem;font-weight:900;color:{loiter_color};line-height:1.1;">{loiter_compare_text}</div>'
+            f'          <div style="font-size:0.82rem;font-weight:900;color:{travel_color};line-height:1.1;">{travel_compare_text}</div>'
 
-            f'          <div style="font-size:0.56rem;color:{text_muted};margin-top:2px;">Same station &middot; travel-adjusted</div>'
+            f'          <div style="font-size:0.56rem;color:{text_muted};margin-top:2px;">{travel_detail_text}</div>'
 
             f'        </div>'
 
@@ -2763,11 +2773,11 @@ def _build_unit_cards_html(active_drones, text_main, text_muted, card_bg, card_b
 
             f'        <div style="background:rgba(255,255,255,0.04); border:1px solid {card_border}; border-radius:6px; padding:6px 8px; margin-top:6px;">'
 
-            f'          <div style="font-size:0.56rem; color:{text_muted}; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:3px;">Loiter advantage<span class="tip" data-tip="Signed loiter difference versus the other drone type at the same station. Positive means the current unit can stay on scene longer.">?</span></div>'
+            f'          <div style="font-size:0.56rem; color:{text_muted}; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:3px;">Arrival advantage<span class="tip" data-tip="Average station-to-call travel time compared between Guardian and Responder at the same station. The faster unit arrives first.">?</span></div>'
 
-            f'          <div style="font-size:0.82rem; font-weight:900; color:{loiter_color}; line-height:1.1;">{loiter_compare_text}</div>'
+            f'          <div style="font-size:0.82rem; font-weight:900; color:{travel_color}; line-height:1.1;">{travel_compare_text}</div>'
 
-            f'          <div style="font-size:0.56rem; color:{text_muted}; margin-top:2px;">Same station &middot; travel-adjusted</div>'
+            f'          <div style="font-size:0.56rem; color:{text_muted}; margin-top:2px;">{travel_detail_text}</div>'
 
             f'        </div>'
 
@@ -2914,12 +2924,12 @@ def _build_unit_cards_html(active_drones, text_main, text_muted, card_bg, card_b
   </div>
   <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:6px;padding:6px 8px;background:rgba(255,255,255,0.03);border:1px solid {card_border};border-radius:5px;">
     <div>
-      <div style="font-size:0.57rem;color:{text_muted};text-transform:uppercase;letter-spacing:0.3px;">Loiter advantage<span class="tip" data-tip="Signed loiter difference versus the other drone type at the same station. Positive means the current unit can stay on scene longer.">?</span></div>
-      <div style="font-size:0.88rem;font-weight:800;color:{loiter_color};">{loiter_compare_text}</div>
+      <div style="font-size:0.57rem;color:{text_muted};text-transform:uppercase;letter-spacing:0.3px;">Arrival advantage<span class="tip" data-tip="Average station-to-call travel time compared between Guardian and Responder at the same station. The faster unit arrives first.">?</span></div>
+      <div style="font-size:0.88rem;font-weight:800;color:{travel_color};">{travel_compare_text}</div>
     </div>
     <div style="text-align:right;">
       <div style="font-size:0.57rem;color:{text_muted};text-transform:uppercase;letter-spacing:0.3px;">Same station</div>
-      <div style="font-size:0.72rem;font-weight:700;color:{text_muted};line-height:1.2;">Travel-adjusted</div>
+      <div style="font-size:0.72rem;font-weight:700;color:{text_muted};line-height:1.2;">{travel_detail_text}</div>
     </div>
   </div>
   {_sim_fin_specialty}

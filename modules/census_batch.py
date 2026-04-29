@@ -664,12 +664,18 @@ def submit_census_batch_chunk(
     timeout: int = 180,
     returntype: str = 'locations',
     retries: int = 3,
+    attempt_logger=None,
 ) -> tuple[pd.DataFrame, bytes]:
     fields = {'benchmark': benchmark}
     url = f'https://geocoding.geo.census.gov/geocoder/{returntype}/addressbatch'
     body, content_type = _encode_multipart_formdata(fields, 'addressFile', filename, csv_bytes)
     last_error = None
     for attempt in range(1, max(1, retries) + 1):
+        if attempt_logger is not None:
+            attempt_logger(
+                f"Census chunk request attempt {attempt}/{max(1, retries)} for {filename} "
+                f"(timeout {timeout}s)."
+            )
         req = urllib.request.Request(
             url,
             data=body,
@@ -688,17 +694,29 @@ def submit_census_batch_chunk(
             break
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode('utf-8', errors='ignore')
+            if attempt_logger is not None:
+                attempt_logger(f"Census HTTP {exc.code} for {filename}: {detail[:160] or exc.reason}")
             raise RuntimeError(f'Census HTTP {exc.code}: {detail[:400] or exc.reason}') from exc
         except (urllib.error.URLError, http.client.RemoteDisconnected, TimeoutError, ConnectionResetError) as exc:
             last_error = exc
             if attempt >= max(1, retries):
                 raise RuntimeError(f'Census connection failed after {attempt} attempt(s): {exc}') from exc
+            if attempt_logger is not None:
+                attempt_logger(
+                    f"Census chunk attempt {attempt}/{max(1, retries)} for {filename} failed: {exc}. "
+                    f"Retrying in {min(6, attempt * 2)}s."
+                )
             time.sleep(min(6, attempt * 2))
             continue
         except Exception as exc:
             last_error = exc
             if attempt >= max(1, retries):
                 raise RuntimeError(f'Census request failed after {attempt} attempt(s): {exc}') from exc
+            if attempt_logger is not None:
+                attempt_logger(
+                    f"Census chunk attempt {attempt}/{max(1, retries)} for {filename} failed: {exc}. "
+                    f"Retrying in {min(6, attempt * 2)}s."
+                )
             time.sleep(min(6, attempt * 2))
             continue
     else:

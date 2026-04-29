@@ -4187,7 +4187,7 @@ def main():
                                 _set_upload_overlay_status(
                                     title="CENSUS AUTOMATION",
                                     status="SUBMITTING BATCHES",
-                                    copy="Sending chunked address batches directly to the Census geocoder and waiting for returned coordinates.",
+                                    copy="Sending chunked address batches directly to the Census geocoder. The bar will stay near 42% until a chunk returns, and retry notes will appear below.",
                                     progress=42,
                                     logs=_upload_logs,
                                 )
@@ -4205,7 +4205,7 @@ def main():
                                     _set_upload_overlay_status(
                                         title="CENSUS AUTOMATION",
                                         status=f"SUBMITTING CHUNK {chunk_idx} OF {total_chunks}",
-                                        copy="Waiting for the Census batch endpoint to return the geocoded CSV for this chunk.",
+                                        copy="Waiting for the Census batch endpoint to return the geocoded CSV for this chunk. This can take several minutes for a large batch.",
                                         progress=42 + int(completed_chunks / max(1, total_chunks) * 34),
                                         logs=_upload_logs,
                                     )
@@ -4213,6 +4213,7 @@ def main():
                                         chunk_result_df, _chunk_resp = submit_census_batch_chunk(
                                             chunk['csv_bytes'],
                                             chunk['filename'],
+                                            attempt_logger=_push_upload_log,
                                         )
                                     except Exception as exc:
                                         if chunk['rows'] > 1000 and chunk.get('frame') is not None:
@@ -5740,6 +5741,7 @@ body{{background:transparent;overflow:hidden}}
                 _alt_speed       = CONFIG["GUARDIAN_SPEED"] if _alt_is_guard else CONFIG["RESPONDER_SPEED"]
                 _alt_travel_cost = (_alt_avg_dist / _alt_speed) * 60 if _alt_speed > 0 else 0.0
                 _alt_response_cost = _alt_travel_cost + _MIN_SCENE_MIN
+                _alt_avg_time_min = _alt_travel_cost
                 _alt_max_flights  = calculate_max_flights_per_day(
                     _alt_response_cost,
                     flight_minutes=CONFIG["GUARDIAN_FLIGHT_MIN"] if _alt_is_guard else CONFIG["RESPONDER_FLIGHT_MIN"],
@@ -5863,6 +5865,7 @@ body{{background:transparent;overflow:hidden}}
                 d['true_util']           = _true_util
                 d['on_scene_min']        = _on_scene_min
                 d['alt_on_scene_min']    = _alt_on_scene_min
+                d['alt_avg_time_min']    = _alt_avg_time_min
                 d['loiter_vs_other_min'] = _on_scene_min - _alt_on_scene_min
                 d['max_flights_cap']     = _max_flights_cap
                 d['effective_dfr_rate']  = _effective_dfr
