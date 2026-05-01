@@ -1,9 +1,6 @@
 .streamlit/secrets.toml
 *.pyc
 __pycache__/
-.venv/
-streamlit_smoke.out
-streamlit_smoke.err
 cell_coverage/raw/
 regulatory_layers/*.parquet
 DOF_Public.csv
