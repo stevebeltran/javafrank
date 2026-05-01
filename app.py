@@ -1001,10 +1001,14 @@ def _make_random_stations(df_calls, n=40, boundary_geom=None, epsg_code=None):
     })
 
 @st.cache_data(show_spinner=False)
-def _fetch_osm_stations_cached(cen_lat_r: float, cen_lon_r: float, max_stations: int = 200):
+def _fetch_osm_stations_cached(cen_lat_r: float, cen_lon_r: float, max_stations: int = 200,
+                                bbox_min_lat: float = None, bbox_min_lon: float = None,
+                                bbox_max_lat: float = None, bbox_max_lon: float = None):
     """Cache-friendly OSM query keyed on rounded centroid (2 dp ≈ 1 km grid).
     Returns (list_of_dicts | None, note_str).  All three Overpass mirrors are
     queried in parallel — total wait = fastest mirror, not sum of all mirrors.
+    When explicit bbox bounds are provided they are used instead of the fixed
+    radii so the search covers the entire city/jurisdiction.
     """
     osm_urls = [
         'https://overpass-api.de/api/interpreter',
@@ -1023,8 +1027,18 @@ def _fetch_osm_stations_cached(cen_lat_r: float, cen_lon_r: float, max_stations:
         except Exception:
             return None
 
-    for R in [0.25, 0.45]:
-        bbox = f"{cen_lat_r - R},{cen_lon_r - R},{cen_lat_r + R},{cen_lon_r + R}"
+    # When explicit bounds are provided, use a single pass with the full bbox;
+    # otherwise fall back to the legacy expanding-radius approach.
+    if bbox_min_lat is not None:
+        _radii = [None]  # single pass using explicit bounds
+    else:
+        _radii = [0.25, 0.45]
+
+    for R in _radii:
+        if R is None:
+            bbox = f"{bbox_min_lat},{bbox_min_lon},{bbox_max_lat},{bbox_max_lon}"
+        else:
+            bbox = f"{cen_lat_r - R},{cen_lon_r - R},{cen_lat_r + R},{cen_lon_r + R}"
         query = (
             f'[out:json][timeout:20];'
             f'(node["amenity"="fire_station"]({bbox});'
@@ -1213,11 +1227,13 @@ def generate_stations_from_calls(df_calls, max_stations=100):
     cen_lat_r = round(float(lats[mask].mean()), 2)
     cen_lon_r = round(float(lons[mask].mean()), 2)
 
-    _pad = 0.45
-    min_lat_r = round(cen_lat_r - _pad, 2)
-    max_lat_r = round(cen_lat_r + _pad, 2)
-    min_lon_r = round(cen_lon_r - _pad, 2)
-    max_lon_r = round(cen_lon_r + _pad, 2)
+    # Derive bbox from the actual data spread so the search covers the entire
+    # city/jurisdiction instead of a fixed radius around the centroid.
+    _pad = 0.05  # small buffer (~5.5 km) beyond the outermost calls
+    min_lat_r = round(float(lats[mask].min()) - _pad, 2)
+    max_lat_r = round(float(lats[mask].max()) + _pad, 2)
+    min_lon_r = round(float(lons[mask].min()) - _pad, 2)
+    max_lon_r = round(float(lons[mask].max()) + _pad, 2)
 
     osm_rows, osm_note = None, "OSM unavailable"
     hifld_rows, hifld_note = None, "HIFLD unavailable"
@@ -1225,7 +1241,8 @@ def generate_stations_from_calls(df_calls, max_stations=100):
     pool = cf.ThreadPoolExecutor(max_workers=2)
     try:
         futures = {
-            'OSM': pool.submit(_fetch_osm_stations_cached, cen_lat_r, cen_lon_r, max_stations),
+            'OSM': pool.submit(_fetch_osm_stations_cached, cen_lat_r, cen_lon_r, max_stations,
+                               min_lat_r, min_lon_r, max_lat_r, max_lon_r),
             'HIFLD': pool.submit(_fetch_hifld_stations_cached, min_lat_r, min_lon_r, max_lat_r, max_lon_r),
         }
         _, not_done = cf.wait(futures.values(), timeout=12)
