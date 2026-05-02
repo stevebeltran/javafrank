@@ -5338,7 +5338,7 @@ if (stations.length === 0) {{
 
     const icon = s.type === 'GUARDIAN' ? '🦅' : '🚁';
 
-    const color = s.type === 'GUARDIAN' ? '#b45309' : '#1a56db';
+    const color = s.type === 'GUARDIAN' ? '#FFD700' : '#00D2FF';
 
     sl.innerHTML += `<div>${{icon}} <span style="color:${{color}};font-weight:600;">${{s.type.charAt(0)+s.type.slice(1).toLowerCase()}}</span> — ${{s.name}}</div>`;
 

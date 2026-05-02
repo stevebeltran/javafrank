@@ -6010,13 +6010,34 @@ body{{background:transparent;overflow:hidden}}
         for idx in active_guard_idx:
             if idx not in chrono_g: ordered_deployments_raw.append((idx,'GUARDIAN'))
 
+        guardian_color = "#FFD700"
+        responder_color = "#00D2FF"
+        extra_station_colors = [
+            c for c in STATION_COLORS
+            if c not in {guardian_color, responder_color}
+        ]
         active_color_map = {}
-        c_idx = 0
+        role_color_counts = {"GUARDIAN": 0, "RESPONDER": 0}
+        extra_color_idx = 0
         for idx, d_type in ordered_deployments_raw:
             key = f"{idx}_{d_type}"
-            if key not in active_color_map:
-                active_color_map[key] = STATION_COLORS[c_idx % len(STATION_COLORS)]
-                c_idx += 1
+            if key in active_color_map:
+                continue
+            if d_type == "GUARDIAN":
+                if role_color_counts["GUARDIAN"] == 0:
+                    color = guardian_color
+                else:
+                    color = extra_station_colors[extra_color_idx % len(extra_station_colors)]
+                    extra_color_idx += 1
+                role_color_counts["GUARDIAN"] += 1
+            else:
+                if role_color_counts["RESPONDER"] == 0:
+                    color = responder_color
+                else:
+                    color = extra_station_colors[extra_color_idx % len(extra_station_colors)]
+                    extra_color_idx += 1
+                role_color_counts["RESPONDER"] += 1
+            active_color_map[key] = color
 
         guard_geos = [station_metadata[i]['clipped_guard'] for i in active_guard_idx]
         resp_geos  = [station_metadata[i]['clipped_2m']    for i in active_resp_idx]
