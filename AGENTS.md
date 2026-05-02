@@ -13,6 +13,19 @@
 - When finished, report exactly which files were changed.
 - If tests or validation were not run, say so.
 
+# Codex behavior request
+
+Before making any file changes, read back a short plan and wait for confirmation unless the user explicitly says to proceed without a plan.
+
+For small questions, answer directly.
+For any task that would edit code, run tests, or touch files, summarize:
+
+- what you think needs to change
+- which files you expect to touch
+- any risks or open questions
+
+Then pause and wait for the user to approve the plan before editing.
+
 # Recommended workflow
 
 - One feature or fix per branch.
