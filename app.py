@@ -5782,6 +5782,7 @@ body{{background:transparent;overflow:hidden}}
         show_cell_towers = _display_opts['show_cell_towers']
         show_heatmap = _display_opts['show_heatmap']
         show_dots = _display_opts['show_dots']
+        show_station_suggestions = _display_opts['show_station_suggestions']
         show_rapid_response_ring = _display_opts['show_rapid_response_ring']
         simulate_traffic = _display_opts['simulate_traffic']
         show_health = _display_opts['show_health']
@@ -5930,27 +5931,36 @@ body{{background:transparent;overflow:hidden}}
             )
             st.session_state['_station_suggestions'] = _suggestions
 
-            # Initialise toggle state on first encounter
-            if 'suggestion_toggles' not in st.session_state and _suggestions:
-                st.session_state['suggestion_toggles'] = {
-                    s['station_idx']: (s['rank'] <= 3) for s in _suggestions
-                }
+            _suggestion_modes = st.session_state.get('suggestion_modes', {}) or {}
+            _suggestion_modes = {
+                s['station_idx']: _suggestion_modes.get(
+                    s['station_idx'],
+                    s['role'] if s['rank'] <= 3 else 'Off',
+                )
+                for s in _suggestions
+            }
+            st.session_state['suggestion_modes'] = _suggestion_modes
+            st.session_state['suggestion_toggles'] = {
+                idx: (mode != 'Off') for idx, mode in _suggestion_modes.items()
+            }
 
-            # Apply suggestion toggles → slider counts & locked pins
-            _stg = st.session_state.get('suggestion_toggles', {})
-            _sug_resp_idx = [s['station_idx'] for s in _suggestions
-                            if _stg.get(s['station_idx']) and s['role'] == 'Responder']
-            _sug_guard_idx = [s['station_idx'] for s in _suggestions
-                             if _stg.get(s['station_idx']) and s['role'] == 'Guardian']
-            if _sug_resp_idx or _sug_guard_idx:
-                k_responder = max(k_responder, len(_sug_resp_idx))
-                k_guardian = max(k_guardian, len(_sug_guard_idx))
-                for _si in _sug_resp_idx:
-                    if _si not in locked_r_pins:
-                        locked_r_pins.append(_si)
-                for _si in _sug_guard_idx:
-                    if _si not in locked_g_pins:
-                        locked_g_pins.append(_si)
+            _sug_resp_idx = [
+                s['station_idx'] for s in _suggestions
+                if _suggestion_modes.get(s['station_idx']) == 'Responder'
+            ]
+            _sug_guard_idx = [
+                s['station_idx'] for s in _suggestions
+                if _suggestion_modes.get(s['station_idx']) == 'Guardian'
+            ]
+            locked_r_pins = list(dict.fromkeys(locked_r_pins + _sug_resp_idx))
+            locked_g_pins = list(dict.fromkeys(locked_g_pins + _sug_guard_idx))
+            desired_resp_count = len(locked_r_pins)
+            desired_guard_count = len(locked_g_pins)
+            if desired_resp_count != k_responder or desired_guard_count != k_guardian:
+                k_responder = desired_resp_count
+                k_guardian = desired_guard_count
+                st.session_state['k_resp'] = k_responder
+                st.session_state['k_guard'] = k_guardian
 
         # ── OPTIMIZATION ──────────────────────────────────────────────────
         _pins_key = f"{sorted(locked_g_pins)}_{sorted(locked_r_pins)}"
@@ -7087,7 +7097,7 @@ body{{background:transparent;overflow:hidden}}
                 ))
 
             # ── Suggestion "?" markers on map ─────────────────────────────
-            if _using_suggestions and _suggestions and st.session_state.get('show_suggestion_markers', True):
+            if _using_suggestions and _suggestions and show_station_suggestions and st.session_state.get('show_suggestion_markers', True):
                 _stg_map = st.session_state.get('suggestion_toggles', {})
                 _sug_on_lat, _sug_on_lon, _sug_on_text = [], [], []
                 _sug_off_lat, _sug_off_lon, _sug_off_text = [], [], []
@@ -7242,7 +7252,7 @@ body{{background:transparent;overflow:hidden}}
 
 
         # ── STATION SUGGESTIONS PANEL (public data, no stations file) ────────────
-        if _using_suggestions and _suggestions:
+        if _using_suggestions and _suggestions and show_station_suggestions:
             _sug_changed = render_station_suggestions(
                 st, st.session_state, _suggestions,
                 text_main, text_muted, card_bg, card_border, accent_color,

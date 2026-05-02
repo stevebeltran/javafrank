@@ -1396,7 +1396,7 @@ def _build_cad_charts_html(df_calls):
 
         import streamlit as _st
 
-        dfr_rate        = float(_st.session_state.get('dfr_rate', 30)) / 100.0
+        dfr_rate        = float(_st.session_state.get('dfr_rate', 25)) / 100.0
 
         pursuit_rate    = 0.18
 
@@ -1706,7 +1706,7 @@ def _build_apprehension_table(df_calls, text_main, text_muted, card_bg, card_bor
 
     total_calls      = int(st.session_state.get('total_original_calls', len(df_calls)) or len(df_calls))
 
-    dfr_rate         = float(st.session_state.get('dfr_rate', 30)) / 100.0   # fraction dispatched by drone
+    dfr_rate         = float(st.session_state.get('dfr_rate', 25)) / 100.0   # fraction dispatched by drone
 
     calls_per_year   = _get_annualized_calls(total_calls)
 

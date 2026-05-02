@@ -422,6 +422,12 @@ def render_display_options(st):
             key='show_dots_b',
             help='Show individual 911 call locations as dots on the map.',
         )
+        show_station_suggestions = st.toggle(
+            'Suggested Station Placements',
+            value=True,
+            key='show_station_suggestions_b',
+            help='Show or hide the suggested station placement workflow and its map markers.',
+        )
         if 'show_rapid_response_ring_b' not in st.session_state:
             st.session_state['show_rapid_response_ring_b'] = True
         st.toggle(
@@ -467,6 +473,7 @@ def render_display_options(st):
         'show_cell_towers': show_cell_towers,
         'show_heatmap': show_heatmap,
         'show_dots': show_dots,
+        'show_station_suggestions': show_station_suggestions,
         'show_rapid_response_ring': show_rapid_response_ring,
         'simulate_traffic': simulate_traffic,
         'show_health': show_health,
@@ -1371,7 +1378,7 @@ def prepare_runtime_context(
         st.caption(f'Derived from the full uploaded CAD total ({full_total_calls:,} incidents).')
         st.markdown(f"<div style='font-size:0.72rem; color:{text_muted}; margin-top:8px; margin-bottom:2px;'>DFR Dispatch Rate (%)</div>", unsafe_allow_html=True)
         st.markdown("<div style='font-size:0.65rem; color:#666; margin-bottom:4px;'>What % of in-range calls will the drone be sent to?</div>", unsafe_allow_html=True)
-        dfr_dispatch_rate = st.slider('DFR Dispatch Rate', 1, 100, session_state.get('dfr_rate', 30), label_visibility='collapsed', help='Percentage of in-range calls the drone is dispatched to. Higher rates increase coverage and savings projections.') / 100.0
+        dfr_dispatch_rate = st.slider('DFR Dispatch Rate', 1, 100, session_state.get('dfr_rate', 25), label_visibility='collapsed', help='Percentage of in-range calls the drone is dispatched to. Higher rates increase coverage and savings projections.') / 100.0
         st.markdown(f"<div style='font-size:0.72rem; color:{text_muted}; margin-top:8px; margin-bottom:2px;'>Calls Resolved Without Officer Dispatch (%)</div>", unsafe_allow_html=True)
         st.markdown("<div style='font-size:0.65rem; color:#666; margin-bottom:4px;'>Of drone-attended calls, what % close without a patrol car?</div>", unsafe_allow_html=True)
         deflection_rate = st.slider('Resolution Rate', 0, 100, session_state.get('deflect_rate', 30), label_visibility='collapsed', help='Of drone-attended calls, the percentage that close without requiring a patrol car dispatch. Higher values increase officer hours saved.') / 100.0
@@ -1807,18 +1814,36 @@ def render_station_suggestions(st, session_state, suggestions, text_main, text_m
     if not suggestions:
         return False
 
-    # Initialise toggle state on first render
-    if 'suggestion_toggles' not in session_state:
-        session_state['suggestion_toggles'] = {
-            s['station_idx']: (s['rank'] <= 3) for s in suggestions
+    mode_options = ['Guardian', 'Responder', 'Off']
+    # Initialise mode state on first render.
+    if 'suggestion_modes' not in session_state:
+        if 'suggestion_toggles' in session_state:
+            session_state['suggestion_modes'] = {
+                s['station_idx']: (
+                    s['role'] if session_state['suggestion_toggles'].get(s['station_idx']) else 'Off'
+                )
+                for s in suggestions
+            }
+        else:
+            session_state['suggestion_modes'] = {
+                s['station_idx']: (s['role'] if s['rank'] <= 3 else 'Off')
+                for s in suggestions
+            }
+    else:
+        session_state['suggestion_modes'] = {
+            s['station_idx']: session_state['suggestion_modes'].get(
+                s['station_idx'],
+                s['role'] if s['rank'] <= 3 else 'Off',
+            )
+            for s in suggestions
         }
     if 'show_suggestion_markers' not in session_state:
         session_state['show_suggestion_markers'] = True
 
-    toggles = session_state['suggestion_toggles']
+    modes = session_state['suggestion_modes']
     changed = False
 
-    n_on = sum(1 for v in toggles.values() if v)
+    n_on = sum(1 for v in modes.values() if v != 'Off')
     st.markdown(
         f"<div style='margin-top:12px; margin-bottom:6px; display:flex; align-items:center; "
         f"justify-content:space-between;'>"
@@ -1837,13 +1862,12 @@ def render_station_suggestions(st, session_state, suggestions, text_main, text_m
         cols = st.columns(5, gap="small")
         for ci, s in enumerate(row_items):
             idx = s['station_idx']
-            is_on = toggles.get(idx, False)
-            role = s['role']
-            role_color = '#00D2FF' if role == 'Responder' else '#FFD700'
-            role_abbr = 'R' if role == 'Responder' else 'G'
-            border_col = role_color if is_on else card_border
-            bg = card_bg if is_on else 'rgba(30,30,40,0.4)'
-            opacity = '1.0' if is_on else '0.55'
+            mode = modes.get(idx, 'Off')
+            mode_color = '#FFD700' if mode == 'Guardian' else '#00D2FF' if mode == 'Responder' else '#9aa0b4'
+            mode_abbr = 'G' if mode == 'Guardian' else 'R' if mode == 'Responder' else 'O'
+            border_col = mode_color if mode != 'Off' else card_border
+            bg = card_bg if mode != 'Off' else 'rgba(30,30,40,0.4)'
+            opacity = '1.0' if mode != 'Off' else '0.55'
 
             # Truncate name
             display_name = s['name']
@@ -1857,8 +1881,8 @@ def render_station_suggestions(st, session_state, suggestions, text_main, text_m
                     f"min-height:72px; font-size:0.7rem; line-height:1.3;'>"
                     f"<div style='display:flex; justify-content:space-between; align-items:center;'>"
                     f"<span style='font-weight:700; color:{text_main};'>#{s['rank']}</span>"
-                    f"<span style='background:{role_color}; color:#000; font-size:0.55rem; "
-                    f"font-weight:800; padding:1px 5px; border-radius:3px;'>{role_abbr}</span></div>"
+                    f"<span style='background:{mode_color}; color:#000; font-size:0.55rem; "
+                    f"font-weight:800; padding:1px 5px; border-radius:3px;'>{mode_abbr}</span></div>"
                     f"<div style='color:{text_main}; font-weight:600; margin:2px 0; "
                     f"white-space:nowrap; overflow:hidden; text-overflow:ellipsis;' "
                     f"title='{s['name']}'>{display_name}</div>"
@@ -1867,14 +1891,16 @@ def render_station_suggestions(st, session_state, suggestions, text_main, text_m
                     f"</div>",
                     unsafe_allow_html=True,
                 )
-                new_val = st.checkbox(
-                    'On' if is_on else 'Off',
-                    value=is_on,
-                    key=f"suggest_toggle_{idx}",
+                new_mode = st.radio(
+                    'Fleet Mode',
+                    options=mode_options,
+                    index=mode_options.index(mode) if mode in mode_options else 2,
+                    key=f"suggest_mode_{idx}",
+                    horizontal=True,
                     label_visibility="collapsed",
                 )
-                if new_val != is_on:
-                    toggles[idx] = new_val
+                if new_mode != mode:
+                    modes[idx] = new_mode
                     changed = True
 
     # Master toggle to hide map markers
@@ -1887,5 +1913,6 @@ def render_station_suggestions(st, session_state, suggestions, text_main, text_m
         session_state['show_suggestion_markers'] = show_markers
         changed = True
 
-    session_state['suggestion_toggles'] = toggles
+    session_state['suggestion_modes'] = modes
+    session_state['suggestion_toggles'] = {idx: (mode != 'Off') for idx, mode in modes.items()}
     return changed
