@@ -821,25 +821,6 @@ def manage_custom_stations(
     # Responder can use any uploaded station + custom stations
     max_resp_calc = n + n_custom_responder
 
-    # Auto-sync slider values with selected card counts
-    # If card selections changed, update the slider values to match
-    prev_selected_responder = session_state.get('_prev_selected_responder', 0)
-    prev_selected_guardian = session_state.get('_prev_selected_guardian', 0)
-
-    if n_selected_responder != prev_selected_responder:
-        # Card selection changed for responder - update slider to match
-        session_state['k_resp'] = n_selected_responder
-        session_state['_prev_selected_responder'] = n_selected_responder
-    else:
-        session_state['_prev_selected_responder'] = n_selected_responder
-
-    if n_selected_guardian != prev_selected_guardian:
-        # Card selection changed for guardian - update slider to match
-        session_state['k_guard'] = n_selected_guardian
-        session_state['_prev_selected_guardian'] = n_selected_guardian
-    else:
-        session_state['_prev_selected_guardian'] = n_selected_guardian
-
     public_facility_types = {'Police', 'Fire', 'School', 'Government', 'Library'}
 
     def _looks_like_street_address(text):
@@ -889,11 +870,16 @@ def manage_custom_stations(
     except Exception:
         pass
 
-    val_r = min(session_state.get('k_resp', 2), max_resp_calc)
-    val_g = min(session_state.get('k_guard', 0), max_guard_calc)
+    # For auto-sync with card toggles, use the selected card count as the slider value
+    # But allow user to manually adjust beyond that
+    sync_val_r = max(session_state.get('k_resp', 2), n_selected_responder)
+    sync_val_g = max(session_state.get('k_guard', 0), n_selected_guardian)
 
-    k_responder = st.sidebar.slider('🚁 Responder Count', 0, max(1, max_resp_calc), val_r, key='k_resp', help='Short-range tactical drones (2-3mi radius).')
-    k_guardian = st.sidebar.slider('🦅 Guardian Count', 0, max(1, max_guard_calc), val_g, key='k_guard', help='Long-range overwatch drones (5-8mi radius).')
+    val_r = min(sync_val_r, max_resp_calc)
+    val_g = min(sync_val_g, max_guard_calc)
+
+    k_responder = st.sidebar.slider('🚁 Responder Count', 0, max(1, max_resp_calc), val_r, help='Short-range tactical drones (2-3mi radius).')
+    k_guardian = st.sidebar.slider('🦅 Guardian Count', 0, max(1, max_guard_calc), val_g, help='Long-range overwatch drones (5-8mi radius).')
     session_state.update({'k_resp': k_responder, 'k_guard': k_guardian, 'r_resp': resp_radius_mi, 'r_guard': guard_radius_mi})
 
     station_names = df_stations_all['name'].tolist() if not df_stations_all.empty else []
