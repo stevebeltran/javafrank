@@ -7029,7 +7029,7 @@ body{{background:transparent;overflow:hidden}}
                 if d.get('pinned'):
                     fig.add_trace(go.Scattermap(
                         lat=[d['lat']], lon=[d['lon']], mode='markers',
-                        marker=dict(size=18, color=d['color'], symbol='star'),
+                        marker=dict(size=32, color=d['color'], symbol='star', line=dict(color='white', width=1.5)),
                         name=f"📍 {d['name'].split(',')[0]} (Pinned)",
                         hovertemplate=f"<b>🔒 PINNED</b><br>{d['name']}<br>{d['type']}<extra></extra>",
                         showlegend=False
@@ -7078,7 +7078,7 @@ body{{background:transparent;overflow:hidden}}
                         lat=_custom_lat,
                         lon=_custom_lon,
                         mode='markers',
-                        marker=dict(size=13, color=_custom_color, symbol='diamond'),
+                        marker=dict(size=18, color=_custom_color, symbol='diamond', line=dict(color='white', width=1)),
                         name='Custom Stations',
                         hovertemplate='%{text}<extra></extra>',
                         text=_custom_text,

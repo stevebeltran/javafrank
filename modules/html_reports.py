@@ -3886,7 +3886,7 @@ def generate_community_impact_dashboard_html(
 
     background: {_body_bg};
 
-    padding: 28px 24px 40px;
+    padding: 28px 24px 10px;
 
   }}
 
