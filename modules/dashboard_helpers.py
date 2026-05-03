@@ -810,13 +810,36 @@ def manage_custom_stations(
     n_selected_guardian = sum(1 for mode in suggestion_modes.values() if mode == 'Guardian')
     n_selected_total = sum(1 for mode in suggestion_modes.values() if mode != 'Off')
 
-    # Use selected count if available, otherwise use total
-    effective_n_responder = n_selected_responder if n_selected_responder > 0 else n
-    effective_n_guardian = n_selected_guardian if n_selected_guardian > 0 else n
+    # Count custom stations by type
+    custom_stations = session_state.get('custom_stations', pd.DataFrame())
+    n_custom_responder = len(custom_stations[custom_stations.get('type', '') == 'Responder']) if not custom_stations.empty else 0
+    n_custom_guardian = len(custom_stations[custom_stations.get('type', '') == 'Guardian']) if not custom_stations.empty else 0
 
-    max_resp_calc = min(effective_n_responder, int(math.ceil(area_sq_mi / (math.pi * (r_resp_est**2)))) + 5)
-    # Guardian placements should be allowed at any uploaded in-boundary station.
-    max_guard_calc = effective_n_guardian
+    # Slider max = suggested stations + custom stations for each type (independent)
+    # Guardian can use any uploaded station + custom stations
+    max_guard_calc = n + n_custom_guardian
+    # Responder can use any uploaded station + custom stations
+    max_resp_calc = n + n_custom_responder
+
+    # Auto-sync slider values with selected card counts
+    # If card selections changed, update the slider values to match
+    prev_selected_responder = session_state.get('_prev_selected_responder', 0)
+    prev_selected_guardian = session_state.get('_prev_selected_guardian', 0)
+
+    if n_selected_responder != prev_selected_responder:
+        # Card selection changed for responder - update slider to match
+        session_state['k_resp'] = n_selected_responder
+        session_state['_prev_selected_responder'] = n_selected_responder
+    else:
+        session_state['_prev_selected_responder'] = n_selected_responder
+
+    if n_selected_guardian != prev_selected_guardian:
+        # Card selection changed for guardian - update slider to match
+        session_state['k_guard'] = n_selected_guardian
+        session_state['_prev_selected_guardian'] = n_selected_guardian
+    else:
+        session_state['_prev_selected_guardian'] = n_selected_guardian
+
     public_facility_types = {'Police', 'Fire', 'School', 'Government', 'Library'}
 
     def _looks_like_street_address(text):
