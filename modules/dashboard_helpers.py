@@ -803,9 +803,20 @@ def manage_custom_stations(
     search_public_facility_candidates=None,
 ):
     n = len(df_stations_all)
-    max_resp_calc = min(n, int(math.ceil(area_sq_mi / (math.pi * (r_resp_est**2)))) + 5)
+
+    # Count selected stations from Suggested Station Placements (Guardian and Responder only)
+    suggestion_modes = session_state.get('suggestion_modes', {})
+    n_selected_responder = sum(1 for mode in suggestion_modes.values() if mode == 'Responder')
+    n_selected_guardian = sum(1 for mode in suggestion_modes.values() if mode == 'Guardian')
+    n_selected_total = sum(1 for mode in suggestion_modes.values() if mode != 'Off')
+
+    # Use selected count if available, otherwise use total
+    effective_n_responder = n_selected_responder if n_selected_responder > 0 else n
+    effective_n_guardian = n_selected_guardian if n_selected_guardian > 0 else n
+
+    max_resp_calc = min(effective_n_responder, int(math.ceil(area_sq_mi / (math.pi * (r_resp_est**2)))) + 5)
     # Guardian placements should be allowed at any uploaded in-boundary station.
-    max_guard_calc = n
+    max_guard_calc = effective_n_guardian
     public_facility_types = {'Police', 'Fire', 'School', 'Government', 'Library'}
 
     def _looks_like_street_address(text):
