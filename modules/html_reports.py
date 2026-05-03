@@ -2742,9 +2742,9 @@ def _build_unit_cards_html(active_drones, text_main, text_muted, card_bg, card_b
 
             f'  <div style="background:{status_bg}; border:1px solid {status_border}; border-radius:6px; padding:8px 10px;">'
 
-            f'    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">'
+            f'    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:nowrap;">'
 
-            f'      <div>'
+            f'      <div style="flex:1; background:rgba(255,255,255,0.04); border:1px solid {card_border}; border-radius:6px; padding:8px 10px; text-align:center;">'
 
             f'        <div style="font-size:0.68rem; color:{text_muted}; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">Attributed Dispatchable Calls<span class="tip" data-tip="Overlap-shared annual dispatchable demand credited to this unit. This is the demand share used for utilization and value calculations.">?</span></div>'
 
@@ -2752,29 +2752,25 @@ def _build_unit_cards_html(active_drones, text_main, text_muted, card_bg, card_b
 
             f'      </div>'
 
-            f'      <div style="min-width:138px;">'
+            f'      <div style="flex:1; background:rgba(255,255,255,0.04); border:1px solid {card_border}; border-radius:6px; padding:8px 10px; text-align:center;">'
 
-            f'        <div style="background:rgba(255,255,255,0.04); border:1px solid {card_border}; border-radius:6px; padding:6px 8px;">'
+            f'        <div style="font-size:0.68rem; color:{text_muted}; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">Capacity<span class="tip" data-tip="This unit is at its modeled call-handling ceiling for the current profile.">?</span></div>'
 
-            f'          <div style="font-size:0.56rem; color:{text_muted}; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:3px;">Capacity<span class="tip" data-tip="This unit is at its modeled call-handling ceiling for the current profile.">?</span></div>'
+            f'        <div style="font-size:0.72rem; font-weight:800; color:{card_title}; line-height:1.2; margin-top:3px;">{int(d_calls_unanswered_yr):,} calls unanswered</div>'
 
-            f'          <div style="font-size:0.72rem; font-weight:800; color:{card_title}; line-height:1.2; margin-top:3px;">{int(d_calls_unanswered_yr):,} calls unanswered</div>'
+            f'        <div style="font-size:0.70rem; color:{text_muted}; margin-top:2px;">{d_max_cap:.1f} calls/day capacity ({int(d_total_flights_possible_yr):,}/yr)</div>'
 
-            f'          <div style="font-size:0.70rem; color:{text_muted}; margin-top:2px;">{d_max_cap:.1f} calls/day capacity ({int(d_total_flights_possible_yr):,}/yr)</div>'
+            f'        <div style="font-size:0.70rem; color:{text_muted}; margin-top:2px;">{mins_per_flight:.1f} min/flight</div>'
 
-            f'          <div style="font-size:0.70rem; color:{text_muted}; margin-top:2px;">{mins_per_flight:.1f} min/flight</div>'
+            f'      </div>'
 
-            f'        </div>'
+            f'      <div style="flex:1; background:rgba(255,255,255,0.04); border:1px solid {card_border}; border-radius:6px; padding:8px 10px; text-align:center;">'
 
-            f'        <div style="background:rgba(255,255,255,0.04); border:1px solid {card_border}; border-radius:6px; padding:6px 8px; margin-top:6px;">'
+            f'        <div style="font-size:0.68rem; color:{text_muted}; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">Arrival advantage<span class="tip" data-tip="Average station-to-call travel time compared between Guardian and Responder at the same station. The faster unit arrives first.">?</span></div>'
 
-            f'          <div style="font-size:0.56rem; color:{text_muted}; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:3px;">Arrival advantage<span class="tip" data-tip="Average station-to-call travel time compared between Guardian and Responder at the same station. The faster unit arrives first.">?</span></div>'
+            f'        <div style="font-size:0.82rem; font-weight:900; color:{travel_color}; line-height:1.1;">{travel_compare_text}</div>'
 
-            f'          <div style="font-size:0.82rem; font-weight:900; color:{travel_color}; line-height:1.1;">{travel_compare_text}</div>'
-
-            f'          <div style="font-size:0.56rem; color:{text_muted}; margin-top:2px;">{travel_detail_text}</div>'
-
-            f'        </div>'
+            f'        <div style="font-size:0.65rem; color:{text_muted}; margin-top:4px;">{travel_detail_text}</div>'
 
             f'      </div>'
 
