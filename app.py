@@ -5944,6 +5944,72 @@ body{{background:transparent;overflow:hidden}}
                 idx: (mode != 'Off') for idx, mode in _suggestion_modes.items()
             }
 
+            def _suggestion_modes_sig(mode_map):
+                return tuple(sorted((int(idx), str(mode)) for idx, mode in mode_map.items()))
+
+            def _apply_role_target(role_suggestions, target_count, target_role):
+                target_count = max(0, int(target_count or 0))
+                current_modes = dict(st.session_state.get('suggestion_modes', {}) or {})
+                active_roles = [
+                    s for s in role_suggestions
+                    if current_modes.get(s['station_idx'], 'Off') == target_role
+                ]
+                changed = False
+
+                if len(active_roles) > target_count:
+                    keep_ids = {
+                        s['station_idx']
+                        for s in active_roles[:target_count]
+                    }
+                    for s in role_suggestions:
+                        idx = s['station_idx']
+                        current_mode = current_modes.get(idx, 'Off')
+                        if idx in keep_ids:
+                            new_mode = target_role
+                        elif current_mode == target_role:
+                            new_mode = 'Off'
+                        else:
+                            new_mode = current_mode
+                        if current_mode != new_mode:
+                            current_modes[idx] = new_mode
+                            changed = True
+                        st.session_state[f'suggest_mode_{idx}'] = current_modes.get(idx, 'Off')
+                    st.session_state['suggestion_modes'] = current_modes
+                    st.session_state['suggestion_toggles'] = {
+                        idx: (mode != 'Off') for idx, mode in current_modes.items()
+                    }
+                    return current_modes, changed
+
+                if len(active_roles) < target_count:
+                    for s in role_suggestions:
+                        idx = s['station_idx']
+                        if current_modes.get(idx, 'Off') == 'Off':
+                            current_modes[idx] = target_role
+                            st.session_state[f'suggest_mode_{idx}'] = target_role
+                            changed = True
+                            active_roles.append(s)
+                            if len(active_roles) >= target_count:
+                                break
+
+                for s in role_suggestions:
+                    idx = s['station_idx']
+                    st.session_state[f'suggest_mode_{idx}'] = current_modes.get(idx, 'Off')
+                st.session_state['suggestion_modes'] = current_modes
+                st.session_state['suggestion_toggles'] = {
+                    idx: (mode != 'Off') for idx, mode in current_modes.items()
+                }
+                return current_modes, changed
+
+            _prev_suggestion_sync = st.session_state.get('_suggestion_sync_sig')
+            _prev_resp_count = _prev_guard_count = None
+            _prev_modes_sig = None
+            if _prev_suggestion_sync is not None:
+                _prev_resp_count, _prev_guard_count, _prev_modes_sig = _prev_suggestion_sync
+
+            _curr_modes_sig = _suggestion_modes_sig(_suggestion_modes)
+            _custom_resp_lock_count = len(pinned_resp_names)
+            _custom_guard_lock_count = len(pinned_guard_names)
+
             _sug_resp_idx = [
                 s['station_idx'] for s in _suggestions
                 if _suggestion_modes.get(s['station_idx']) == 'Responder'
@@ -5952,15 +6018,61 @@ body{{background:transparent;overflow:hidden}}
                 s['station_idx'] for s in _suggestions
                 if _suggestion_modes.get(s['station_idx']) == 'Guardian'
             ]
-            locked_r_pins = list(dict.fromkeys(locked_r_pins + _sug_resp_idx))
-            locked_g_pins = list(dict.fromkeys(locked_g_pins + _sug_guard_idx))
-            desired_resp_count = len(locked_r_pins)
-            desired_guard_count = len(locked_g_pins)
-            if desired_resp_count != k_responder or desired_guard_count != k_guardian:
-                k_responder = desired_resp_count
-                k_guardian = desired_guard_count
+
+            _slider_changed = (
+                _prev_suggestion_sync is None
+                or k_responder != _prev_resp_count
+                or k_guardian != _prev_guard_count
+            )
+            _modes_changed = (
+                _prev_suggestion_sync is None
+                or _curr_modes_sig != _prev_modes_sig
+            )
+
+            if _prev_suggestion_sync is None:
+                # Initialize the suggestion counts from the current selection state.
+                k_responder = _custom_resp_lock_count + len(_sug_resp_idx)
+                k_guardian = _custom_guard_lock_count + len(_sug_guard_idx)
                 st.session_state['k_resp'] = k_responder
                 st.session_state['k_guard'] = k_guardian
+            elif _slider_changed and not _modes_changed:
+                _resp_target = max(int(k_responder or 0) - _custom_resp_lock_count, 0)
+                _guard_target = max(int(k_guardian or 0) - _custom_guard_lock_count, 0)
+                _resp_suggestions = [
+                    s for s in _suggestions
+                    if _suggestion_modes.get(s['station_idx']) in {'Responder', 'Off'}
+                ]
+                _guard_suggestions = [
+                    s for s in _suggestions
+                    if _suggestion_modes.get(s['station_idx']) in {'Guardian', 'Off'}
+                ]
+                _suggestion_modes, _resp_changed = _apply_role_target(_resp_suggestions, _resp_target, 'Responder')
+                _suggestion_modes, _guard_changed = _apply_role_target(_guard_suggestions, _guard_target, 'Guardian')
+                if _resp_changed or _guard_changed:
+                    st.session_state['suggestion_modes'] = _suggestion_modes
+                    st.session_state['suggestion_toggles'] = {
+                        idx: (mode != 'Off') for idx, mode in _suggestion_modes.items()
+                    }
+                    _curr_modes_sig = _suggestion_modes_sig(_suggestion_modes)
+            else:
+                k_responder = _custom_resp_lock_count + len(_sug_resp_idx)
+                k_guardian = _custom_guard_lock_count + len(_sug_guard_idx)
+                st.session_state['k_resp'] = k_responder
+                st.session_state['k_guard'] = k_guardian
+
+            locked_r_pins = list(dict.fromkeys(locked_r_pins + [
+                s['station_idx'] for s in _suggestions
+                if _suggestion_modes.get(s['station_idx']) == 'Responder'
+            ]))
+            locked_g_pins = list(dict.fromkeys(locked_g_pins + [
+                s['station_idx'] for s in _suggestions
+                if _suggestion_modes.get(s['station_idx']) == 'Guardian'
+            ]))
+            st.session_state['_suggestion_sync_sig'] = (
+                int(k_responder or 0),
+                int(k_guardian or 0),
+                _curr_modes_sig,
+            )
 
         # ── OPTIMIZATION ──────────────────────────────────────────────────
         _pins_key = f"{sorted(locked_g_pins)}_{sorted(locked_r_pins)}"
