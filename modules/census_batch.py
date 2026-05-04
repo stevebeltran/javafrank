@@ -21,6 +21,7 @@ import pandas as pd
 from modules.config import STATE_FIPS, US_STATES_ABBR
 from modules.efficient_merge import merge_census_results_fast
 from modules.data_validation import validate_census_results, validate_merged_data
+from modules.numbers_adapter import load_numbers_dataframe
 
 
 _STATE_ABBRS = set(STATE_FIPS.keys())
@@ -214,6 +215,10 @@ def _deduplicate_columns(df):
 
 def load_raw_call_table(uploaded_file) -> pd.DataFrame:
     fname = str(uploaded_file.name or '').lower()
+    if fname.endswith('.numbers'):
+        raw_df = load_numbers_dataframe(uploaded_file.getvalue(), uploaded_file.name)
+        raw_df.columns = [str(c).lower().strip() for c in raw_df.columns]
+        return _deduplicate_columns(raw_df).reset_index(drop=True)
     if fname.endswith(_EXCEL_EXTS):
         raw_bytes = uploaded_file.getvalue()
         engine = 'openpyxl'

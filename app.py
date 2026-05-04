@@ -3987,7 +3987,7 @@ def main():
             st.file_uploader(
                 "Optional: Station + boundary overlay files",
                 accept_multiple_files=True,
-                type=['csv', 'xlsx', 'xls', 'xlsb', 'xlsm', 'brinc', 'json', 'txt', 'shp', 'shx', 'dbf', 'prj'],
+                type=['csv', 'xlsx', 'xls', 'xlsb', 'xlsm', 'numbers', 'brinc', 'json', 'txt', 'shp', 'shx', 'dbf', 'prj'],
                 key="sim_optional_uploader",
                 help="Drop a custom station file plus optional shapefile sidecars (.shp/.shx/.dbf/.prj). Path 01 ignores CAD and .brinc files if included."
             )
@@ -4115,7 +4115,7 @@ def main():
             uploaded_files = st.file_uploader(
                 "Drop CAD incident files + optional stations + optional boundary shapefile files",
                 accept_multiple_files=True,
-                type=['csv', 'xlsx', 'xls', 'xlsb', 'xlsm', 'brinc', 'json', 'txt', 'shp', 'shx', 'dbf', 'prj'],
+                type=['csv', 'xlsx', 'xls', 'xlsb', 'xlsm', 'numbers', 'brinc', 'json', 'txt', 'shp', 'shx', 'dbf', 'prj'],
                 label_visibility="collapsed",
                 help="Upload real CAD incident files, optional stations, and optional shapefile sidecars (.shp/.shx/.dbf/.prj) for a display-only boundary overlay. Or drop a .brinc file to restore a previous session."
             )

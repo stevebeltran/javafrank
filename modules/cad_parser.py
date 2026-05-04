@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pyproj
 from modules.config import STATE_FIPS, US_STATES_ABBR, KNOWN_POPULATIONS
+from modules.numbers_adapter import load_numbers_dataframe
 
 def _safe_notna_ratio(values) -> float:
     """Return a stable non-null ratio for possibly empty parse results."""
@@ -371,7 +372,11 @@ def aggressive_parse_calls(uploaded_files, require_valid_coordinates=True):
             fname = cfile.name.lower()
             excel_exts = ('.xlsx', '.xls', '.xlsb', '.xlsm')
 
-            if fname.endswith(excel_exts):
+            if fname.endswith('.numbers'):
+                raw_df = load_numbers_dataframe(cfile.getvalue(), cfile.name)
+                raw_df.columns = [str(c).lower().strip() for c in raw_df.columns]
+                raw_df = _deduplicate_columns(raw_df)
+            elif fname.endswith(excel_exts):
                 # ── Excel path ────────────────────────────────────────────────
                 raw_bytes = cfile.getvalue()
                 engine = 'openpyxl'
