@@ -3998,6 +3998,7 @@ def main():
             )
 
             st.caption("Upload a station file, optional boundary shapefile sidecars, or download the sample template. If no station file is uploaded, stations will be auto-generated from call data.")
+            st.caption("Station uploads are intended for small files only, up to 40 rows. Larger coordinate tables will be treated as incident data and routed through Path 02.")
 
             st.download_button(
                 label="📥 Sample stations.csv",
