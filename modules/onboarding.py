@@ -272,9 +272,12 @@ def _looks_like_station_upload_content(uploaded_file):
         station_df = _normalize_station_columns(station_df)
         station_df, single_col_note = _extract_single_column_station_addresses(station_df)
         cols = {str(column).lower().strip() for column in station_df.columns}
+        row_count = len(station_df)
         if single_col_note:
             return True
         if not cols:
+            return False
+        if row_count > 40:
             return False
         has_coords = {'lat', 'lon'}.issubset(cols)
         has_station_shape = bool(cols & {'name', 'type', 'address', 'lat', 'lon'})
