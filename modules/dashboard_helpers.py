@@ -1907,6 +1907,7 @@ def render_station_suggestions(st, session_state, suggestions, text_main, text_m
             border_col = mode_color if mode != 'Off' else card_border
             bg = card_bg if mode != 'Off' else 'rgba(30,30,40,0.4)'
             opacity = '1.0' if mode != 'Off' else '0.55'
+            widget_key = f"suggest_mode_{idx}"
 
             # Use address if available, otherwise fall back to name
             display_text = s.get('address', '') or s['name']
@@ -1927,16 +1928,18 @@ def render_station_suggestions(st, session_state, suggestions, text_main, text_m
                     f"</div>",
                     unsafe_allow_html=True,
                 )
+                session_state[widget_key] = mode
                 new_mode = st.radio(
                     'Fleet Mode',
                     options=mode_options,
                     index=mode_options.index(mode) if mode in mode_options else 2,
-                    key=f"suggest_mode_{idx}",
+                    key=widget_key,
                     horizontal=True,
                     label_visibility="collapsed",
                 )
                 if new_mode != mode:
                     modes[idx] = new_mode
+                    session_state[widget_key] = new_mode
                     changed = True
 
     # Master toggle to hide map markers
