@@ -426,10 +426,19 @@ def aggressive_parse_calls(uploaded_files, require_valid_coordinates=True):
 
     def _extract_lonlat_pair(series):
         s = series.astype(str).str.strip()
-        pair = s.str.extract(r'^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$')
-        lon = pd.to_numeric(pair[0], errors='coerce')
-        lat = pd.to_numeric(pair[1], errors='coerce')
-        valid = ((lat.between(-90, 90)) & (lon.between(-180, 180))).mean()
+        pair = s.str.extract(r'^\s*[\(\[]?\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*[\)\]]?\s*$')
+        first = pd.to_numeric(pair[0], errors='coerce')
+        second = pd.to_numeric(pair[1], errors='coerce')
+        first_first_valid = ((first.between(-180, 180)) & (second.between(-90, 90))).mean()
+        second_first_valid = ((first.between(-90, 90)) & (second.between(-180, 180))).mean()
+        if second_first_valid >= first_first_valid:
+            lon = second
+            lat = first
+            valid = second_first_valid
+        else:
+            lon = first
+            lat = second
+            valid = first_first_valid
         return lon, lat, float(valid)
 
     def _infer_city_from_location_text(raw_df):
