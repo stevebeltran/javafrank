@@ -21,7 +21,7 @@ import pandas as pd
 from modules.config import STATE_FIPS, US_STATES_ABBR
 from modules.efficient_merge import merge_census_results_fast
 from modules.data_validation import validate_census_results, validate_merged_data
-from modules.cad_parser import _normalize_jacksonville_cfs_report
+from modules.cad_parser import _normalize_jacksonville_cfs_report, _normalize_loxley_priority_calls_report
 from modules.numbers_adapter import load_numbers_dataframe
 
 
@@ -259,6 +259,10 @@ def load_raw_call_table(uploaded_file) -> pd.DataFrame:
             _jacksonville_df = _normalize_jacksonville_cfs_report(raw_bytes, filename=uploaded_file.name)
             if _jacksonville_df is not None and not _jacksonville_df.empty:
                 raw_df = _jacksonville_df
+            else:
+                _priority_calls_df = _normalize_loxley_priority_calls_report(raw_bytes, filename=uploaded_file.name)
+                if _priority_calls_df is not None and not _priority_calls_df.empty:
+                    raw_df = _priority_calls_df
             if _looks_like_headerless_excel_columns(headers_raw) or _looks_like_headerless_cad_export_frame(raw_df):
                 raw_df = _normalize_headerless_excel_frame(raw_df)
             return raw_df.reset_index(drop=True)
@@ -288,6 +292,10 @@ def load_raw_call_table(uploaded_file) -> pd.DataFrame:
             _jacksonville_df = _normalize_jacksonville_cfs_report(raw_bytes, filename=uploaded_file.name)
             if _jacksonville_df is not None and not _jacksonville_df.empty:
                 best_df = _jacksonville_df
+            else:
+                _priority_calls_df = _normalize_loxley_priority_calls_report(raw_bytes, filename=uploaded_file.name)
+                if _priority_calls_df is not None and not _priority_calls_df.empty:
+                    best_df = _priority_calls_df
             if _looks_like_headerless_cad_export_frame(best_df):
                 best_df = _normalize_headerless_excel_frame(best_df)
             return best_df.reset_index(drop=True)

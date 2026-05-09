@@ -32,6 +32,250 @@ def _normalize_jacksonville_cfs_report(raw_bytes, filename=""):
     except Exception:
         return None
 
+def _normalize_loxley_priority_calls_report(raw_bytes, filename=""):
+    """Flatten the Priority Calls workbook into one row per incident.
+
+    This report is a formatted Excel export with a title block at the top and
+    incident details split across paired rows:
+    - column A contains the CFS number on the first row of each incident
+    - column E contains the location, sometimes continued on the next row
+    - column L contains "CallType | Priority | Disposition" text
+
+    The parser converts it into a simple table with street/city/state/zip so
+    the existing Census staging workflow can ingest it.
+    """
+    try:
+        df = pd.read_excel(io.BytesIO(raw_bytes), header=None, dtype=object, engine='openpyxl')
+    except Exception:
+        return None
+
+    try:
+        def _cell_text(value) -> str:
+            if value is None:
+                return ''
+            if hasattr(value, 'strftime'):
+                try:
+                    if isinstance(value, datetime.datetime):
+                        return value.strftime('%Y-%m-%d %H:%M:%S')
+                    if isinstance(value, datetime.time):
+                        return value.strftime('%H:%M:%S')
+                    if isinstance(value, datetime.date):
+                        return value.strftime('%Y-%m-%d')
+                except Exception:
+                    pass
+            text = str(value).strip()
+            if text.lower() in {'nan', 'none', 'nat'}:
+                return ''
+            return re.sub(r'\s+', ' ', text)
+
+        def _first_nonempty(*values) -> str:
+            for value in values:
+                text = _cell_text(value)
+                if text:
+                    return text
+            return ''
+
+        def _parse_department_city() -> str:
+            dept_name = _first_nonempty(
+                df.iat[0, 3] if df.shape[0] > 0 and df.shape[1] > 3 else '',
+                df.iat[1, 3] if df.shape[0] > 1 and df.shape[1] > 3 else '',
+                df.iat[0, 4] if df.shape[0] > 0 and df.shape[1] > 4 else '',
+            )
+            city = re.sub(r'\s+(?:police|fire|sheriff|ems|rescue)\s+department$', '', dept_name, flags=re.I).strip()
+            city = re.sub(r'\s+department$', '', city, flags=re.I).strip()
+            return re.sub(r'\s+', ' ', city).title()
+
+        def _parse_department_name() -> str:
+            dept_name = _first_nonempty(
+                df.iat[0, 3] if df.shape[0] > 0 and df.shape[1] > 3 else '',
+                df.iat[1, 3] if df.shape[0] > 1 and df.shape[1] > 3 else '',
+                df.iat[0, 4] if df.shape[0] > 0 and df.shape[1] > 4 else '',
+            )
+            return re.sub(r'\s+', ' ', dept_name).strip()
+
+        def _parse_header_state_zip() -> tuple[str, str]:
+            header_text = ' '.join(
+                _cell_text(df.iat[r, c])
+                for r in range(min(df.shape[0], 4))
+                for c in range(min(df.shape[1], 10))
+            )
+            m = re.search(r'\b([A-Z]{2})\s+(\d{5})(?:-\d{4})?\b', header_text)
+            if m:
+                return m.group(1).upper(), m.group(2)
+            return '', ''
+
+        def _looks_like_priority(text: str) -> bool:
+            text_u = _cell_text(text).upper()
+            if not text_u:
+                return False
+            return bool(
+                re.fullmatch(r'(?:[1-9]|0?[1-9])(?:\s*-\s*.*)?', text_u)
+                or any(k in text_u for k in ('LOW', 'MED', 'MEDIUM', 'HIGH', 'PRIORITY'))
+            )
+
+        def _priority_value(text: str):
+            text_u = _cell_text(text).upper()
+            if not text_u:
+                return ''
+            if 'HIGH' in text_u:
+                return 1
+            if 'MED' in text_u:
+                return 2
+            if 'LOW' in text_u:
+                return 3
+            m = re.match(r'^\s*(\d+)', text_u)
+            if m:
+                try:
+                    return int(m.group(1))
+                except Exception:
+                    return ''
+            return ''
+
+        def _parse_call_detail(text: str) -> tuple[str, str, str]:
+            parts = [_cell_text(part) for part in str(text or '').split('|')]
+            parts = [part for part in parts if part]
+            if not parts:
+                return '', '', ''
+            call_type = parts[0]
+            priority = ''
+            disposition = ''
+            for part in parts[1:]:
+                if not priority and _looks_like_priority(part):
+                    priority = part
+                    continue
+                if not disposition:
+                    disposition = part
+                else:
+                    disposition = f"{disposition} {part}".strip()
+            return call_type, priority, disposition
+
+        def _split_location(text: str, fallback_city: str) -> tuple[str, str]:
+            loc = _cell_text(text)
+            if not loc:
+                return '', fallback_city
+            parts = [p.strip() for p in re.split(r'\s*,\s*', loc) if p and p.strip()]
+            if len(parts) >= 2:
+                tail = parts[-1].strip()
+                if tail and not re.search(r'\d', tail) and len(tail) <= 40 and not re.search(r'\b(?:AL|AK|AZ|AR|CA|CO|CT|DC|DE|FL|GA|HI|IA|ID|IL|IN|KS|KY|LA|MA|MD|ME|MI|MN|MO|MS|MT|NC|ND|NE|NH|NJ|NM|NV|NY|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VA|VT|WA|WI|WV|WY)\b', tail, re.I):
+                    street = ', '.join(parts[:-1]).strip()
+                    city = tail.title()
+                    return street, city
+            return loc, fallback_city
+
+        header_city = _parse_department_city()
+        department_name = _parse_department_name()
+        header_state, header_zip = _parse_header_state_zip()
+
+        header_row_idx = None
+        cfs_col = None
+        location_col = None
+        detail_col = None
+        for row_idx in range(min(len(df), 30)):
+            values = [_cell_text(v) for v in df.iloc[row_idx].tolist()]
+            values = [v for v in values if v]
+            values_l = [v.lower() for v in values]
+            joined = ' '.join(values_l)
+            if (
+                'cfs #' in values_l
+                and 'location' in values_l
+                and ('calltype' in joined or 'call type' in joined)
+                and 'priority' in joined
+            ):
+                header_row_idx = row_idx
+                for col_idx, cell in enumerate(df.iloc[row_idx].tolist()):
+                    cell_text = _cell_text(cell).lower()
+                    if not cfs_col and (cell_text == 'cfs #' or 'cfs #' in cell_text or cell_text == 'cfs#'):
+                        cfs_col = col_idx
+                    if not location_col and cell_text == 'location':
+                        location_col = col_idx
+                    if not detail_col and 'calltype' in cell_text:
+                        detail_col = col_idx
+                break
+
+        if header_row_idx is None or cfs_col is None or location_col is None or detail_col is None:
+            return None
+
+        rows = []
+        current = None
+        for row_idx in range(header_row_idx + 1, len(df)):
+            row = df.iloc[row_idx]
+            cfs_value = _cell_text(row.iloc[cfs_col] if cfs_col < len(row) else '')
+            location_value = _cell_text(row.iloc[location_col] if location_col < len(row) else '')
+            detail_value = _cell_text(row.iloc[detail_col] if detail_col < len(row) else '')
+
+            if not (cfs_value or location_value or detail_value):
+                continue
+
+            is_new = bool(re.fullmatch(r'\d{4}-\d{6}(?:\.\d+)?', cfs_value))
+            if is_new:
+                if current is not None:
+                    rows.append(current)
+                call_type, priority_text, disposition = _parse_call_detail(detail_value)
+                street, city = _split_location(location_value, header_city)
+                current = {
+                    'cfs_number': cfs_value,
+                    'location': location_value,
+                    'street': street,
+                    'city': city or header_city,
+                    'state': header_state,
+                    'zip': header_zip,
+                    'call_type_desc': call_type,
+                    'priority': _priority_value(priority_text),
+                    'disposition': disposition,
+                    'agency': 'police',
+                    'department_name': department_name,
+                    '_csv_city': city or header_city,
+                    '_csv_state': header_state,
+                }
+                continue
+
+            if current is None:
+                continue
+
+            if location_value:
+                combined_location = _cell_text(current.get('location', ''))
+                if combined_location:
+                    combined_location = f"{combined_location} {location_value}".strip()
+                else:
+                    combined_location = location_value
+                current['location'] = combined_location
+                street, city = _split_location(combined_location, current.get('city') or header_city)
+                if street:
+                    current['street'] = street
+                if city:
+                    current['city'] = city
+
+            if detail_value:
+                call_type, priority_text, disposition = _parse_call_detail(detail_value)
+                if call_type:
+                    current['call_type_desc'] = _first_nonempty(current.get('call_type_desc', ''), call_type)
+                if priority_text:
+                    current['priority'] = _priority_value(priority_text)
+                if disposition:
+                    current['disposition'] = _first_nonempty(current.get('disposition', ''), disposition)
+
+        if current is not None:
+            rows.append(current)
+
+        if not rows:
+            return None
+
+        out = pd.DataFrame(rows)
+        out['_source_row_id'] = [f"{filename}:{i}" if filename else str(i) for i in range(len(out))]
+        out['_source_file'] = filename
+        out['street'] = out['street'].fillna('').astype(str).str.strip()
+        out['city'] = out['city'].fillna('').astype(str).str.strip().str.title()
+        out['state'] = out['state'].fillna('').astype(str).str.strip().str.upper()
+        out['zip'] = out['zip'].fillna('').astype(str).str.strip()
+        out['call_type_desc'] = out['call_type_desc'].fillna('').astype(str).str.strip()
+        out['disposition'] = out['disposition'].fillna('').astype(str).str.strip()
+        out['location'] = out['location'].fillna('').astype(str).str.strip()
+        out['priority'] = pd.to_numeric(out['priority'], errors='coerce').fillna(3).astype(int)
+        out['_special_layout'] = 'priority_calls_report'
+        return out.reset_index(drop=True)
+    except Exception:
+        return None
+
     try:
         header_row_idx = None
         for row_idx in range(min(len(df), 20)):
@@ -655,6 +899,10 @@ def aggressive_parse_calls(uploaded_files, require_valid_coordinates=True):
                 _jacksonville_df = _normalize_jacksonville_cfs_report(raw_bytes, filename=cfile.name)
                 if _jacksonville_df is not None and not _jacksonville_df.empty:
                     raw_df = _jacksonville_df
+                else:
+                    _priority_calls_df = _normalize_loxley_priority_calls_report(raw_bytes, filename=cfile.name)
+                    if _priority_calls_df is not None and not _priority_calls_df.empty:
+                        raw_df = _priority_calls_df
             else:
                 # ── CSV / TXT path ────────────────────────────────────────────
                 content = cfile.getvalue().decode('utf-8', errors='ignore')
