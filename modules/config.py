@@ -290,3 +290,130 @@ def get_jurisdiction_message():
 
 def get_spatial_message():
     return random.choice(SPATIAL_MESSAGES)
+
+
+# --- CRASH SIMULATOR CONFIGURATION ---
+# AVSS Parachute Recovery System (PRS) specs for BRINC drones
+AVSS_PRS_WEIGHT_G = 200
+AVSS_CMFA_FT = 116.8  # Certified Minimum Flight Altitude (35.6 m) — must be above for full deploy
+AVSS_MIN_DEPLOY_FT = 32.8  # 10m — absolute floor for any deployment
+AVSS_MAX_IMPACT_ENERGY_FTLBS = 25.0  # Category 3 limit (33.9 joules)
+
+# Drone weights (estimated)
+DRONE_WEIGHTS = {
+    "RESPONDER": 13.0,  # lbs
+    "GUARDIAN": 18.0,   # lbs
+}
+
+# NTSB reporting threshold (unmanned aircraft > 55 lbs)
+NTSB_REPORT_WEIGHT_LBS = 55.0
+
+# Customer Success Manager territory mapping (by state abbreviation)
+CSM_TERRITORY = {
+    # East: Heath Beaudoin
+    "CT": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "DE": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "FL": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "GA": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "IL": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "IN": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "KY": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "ME": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "MD": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "MA": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "MI": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "MS": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "NH": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "NJ": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "NY": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "NC": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "OH": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "PA": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "RI": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "SC": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "TN": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "VT": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "VA": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "WV": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    "WI": {"name": "Heath Beaudoin", "email": "heath.beaudoin@brincdrones.com", "region": "East"},
+    # West: Peter Ferranti
+    "AL": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "AK": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "AZ": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "AR": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "CA": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "CO": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "HI": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "ID": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "IA": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "KS": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "LA": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "MN": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "MO": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "MT": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "NE": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "NV": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "NM": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "ND": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "OK": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "OR": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "SD": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "TX": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "UT": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "WA": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+    "WY": {"name": "Peter Ferranti", "email": "peter.ferranti@brincdrones.com", "region": "West"},
+}
+
+def get_csm_for_state(state_abbr: str) -> dict:
+    """Get CSM info for a given state abbreviation."""
+    return CSM_TERRITORY.get(state_abbr.upper(), {
+        "name": "BRINC Customer Success",
+        "email": "cs@brincdrones.com",
+        "region": "N/A"
+    })
+
+# BRINC Customer Support info
+BRINC_SUPPORT_HOTLINE = "(866) 849-0282"
+BRINC_SUPPORT_MENU = "Press '2' for support"
+BRINC_SUPPORT_EMERGENCY = "Press '0' for active-operation emergency"
+BRINC_SUPPORT_PORTAL = "https://liveops.brincdrones.com"
+BRINC_SUPPORT_EMAIL = "cs@brincdrones.com"
+
+# Crash simulator scenario types
+CRASH_SCENARIOS = {
+    "bird_strike": {
+        "name": "Bird Strike",
+        "description": "High-speed collision with bird during flight",
+        "icon": "🐦",
+    },
+    "motor_failure": {
+        "name": "Motor Failure",
+        "description": "One or more ESC/motor failure — loss of thrust",
+        "icon": "⚙️",
+    },
+    "battery_failure": {
+        "name": "Battery Failure",
+        "description": "Sudden loss of battery power or voltage collapse",
+        "icon": "🔋",
+    },
+    "operator_error": {
+        "name": "Operator Error",
+        "description": "Erratic control inputs leading to loss of control",
+        "icon": "👤",
+    },
+    "parachute_failure": {
+        "name": "Parachute Failure",
+        "description": "AVSS PRS deployment failure or malfunction",
+        "icon": "🪂",
+    },
+    "weather_event": {
+        "name": "Weather Event",
+        "description": "High wind, turbulence, or environmental event",
+        "icon": "⛈️",
+    },
+    "signal_loss": {
+        "name": "Signal Loss",
+        "description": "Loss of control link or GPS signal",
+        "icon": "📡",
+    },
+}

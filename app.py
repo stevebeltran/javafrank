@@ -130,19 +130,18 @@ __build_revision__ = _versioning_mod.__build_revision__
 __build_datetime__ = _versioning_mod.__build_datetime__
 __build_line_count__ = _versioning_mod.__build_line_count__
 _render_version_badge = _versioning_mod._render_version_badge
-from modules.public_reports import (
-    _build_public_report_url,
-    _get_document_jurisdiction_name,
-    _get_public_report_secret,
-    _get_query_params_dict,
-    _get_request_base_url,
-    _publish_public_report_html,
-    _public_report_metadata_path,
-    _public_report_html_path,
-    _resolve_public_reports_dir,
-    _sign_public_report_id,
-    _slugify,
-)
+_public_reports_mod = _load_local_module("public_reports")
+_build_public_report_url = _public_reports_mod._build_public_report_url
+_get_document_jurisdiction_name = _public_reports_mod._get_document_jurisdiction_name
+_get_public_report_secret = _public_reports_mod._get_public_report_secret
+_get_query_params_dict = _public_reports_mod._get_query_params_dict
+_get_request_base_url = _public_reports_mod._get_request_base_url
+_publish_public_report_html = _public_reports_mod._publish_public_report_html
+_public_report_metadata_path = _public_reports_mod._public_report_metadata_path
+_public_report_html_path = _public_reports_mod._public_report_html_path
+_resolve_public_reports_dir = _public_reports_mod._resolve_public_reports_dir
+_sign_public_report_id = _public_reports_mod._sign_public_report_id
+_slugify = _public_reports_mod._slugify
 from modules.image_utils import (
     get_base64_of_bin_file, get_themed_logo_base64, get_transparent_product_base64
 )
@@ -174,9 +173,10 @@ except Exception as _notifications_import_error:
         return None
 
     print(f"Notifications disabled at startup: {_notifications_import_error}")
-from modules.cad_parser import (
-    aggressive_parse_calls, _extract_file_meta, _get_annualized_calls
-)
+_cad_parser_mod = _load_local_module("cad_parser")
+aggressive_parse_calls = _cad_parser_mod.aggressive_parse_calls
+_extract_file_meta = _cad_parser_mod._extract_file_meta
+_get_annualized_calls = _cad_parser_mod._get_annualized_calls
 _census_batch_mod = _load_local_module("census_batch")
 build_census_staging = _census_batch_mod.build_census_staging
 make_census_batch_chunks = _census_batch_mod.make_census_batch_chunks
@@ -211,7 +211,7 @@ from modules import faa_rf, optimization, html_reports
 _session_state_mod = _load_local_module("session_state")
 init_session_state = _session_state_mod.init_session_state
 from modules.dashboard_helpers import log_map_build_event_once, resolve_master_boundary, render_sidebar_jurisdiction_selector, render_data_filters, render_display_options, render_deployment_strategy, prepare_station_candidates, manage_custom_stations, prepare_runtime_context, optimize_fleet_selection, compute_station_suggestions, render_station_suggestions
-from modules import onboarding as _onboarding_mod
+_onboarding_mod = _load_local_module("onboarding")
 from modules.highway_corridor import (
     STATE_PRIMARY_INTERSTATES,
     fetch_highway_geometry,
@@ -2441,7 +2441,10 @@ def fetch_census_state_population(state_fips):
     return None
 
 SHAPEFILE_DIR = "jurisdiction_data"
-if not os.path.exists(SHAPEFILE_DIR): os.makedirs(SHAPEFILE_DIR)
+try:
+    os.makedirs(SHAPEFILE_DIR, exist_ok=True)
+except OSError:
+    pass  # Directory creation failed; will use temp storage if needed
 
 def _sanitize_boundary_token(value):
     return str(value or "").strip().replace(" ", "_").replace("/", "_")
@@ -7858,6 +7861,32 @@ body{{background:transparent;overflow:hidden}}
                 )
 
                 components.html(sim_html, height=700)
+
+        # ── CRASH / INCIDENT SIMULATOR ───────────────────────────────────────
+        if fleet_capex > 0:
+            st.markdown("---")
+            st.markdown(f"<h3 style='color:{text_main};'>💥 Crash / Incident Simulator <span class='tip' data-tip='Simulate realistic drone incident scenarios including bird strikes, motor failures, and parachute deployment. Generates FAA-compliant reports and telemetry analysis for training and compliance.'>?</span></h3>", unsafe_allow_html=True)
+            st.markdown(f"<div style='font-size:0.82rem; color:{text_muted}; margin-bottom:10px;'>Simulate drone crash events for training, FAA compliance, and customer reporting. Select a scenario, configure conditions, and review the customer report, FAA checklist, telemetry analysis, and parachute performance metrics.</div>", unsafe_allow_html=True)
+
+            show_crash_sim = st.toggle("🛑 Enable Crash Simulator", value=False, key='show_crash_sim', help='Simulate drone incident scenarios including bird strikes, motor failures, battery failure, operator error, and weather events. Generates FAA-compliant reports.')
+            if show_crash_sim:
+                try:
+                    from modules.crash_simulator import render_crash_simulator
+                    _crash_city = st.session_state.get('active_city', 'Jurisdiction')
+                    _crash_state = st.session_state.get('active_state', 'US')
+                    render_crash_simulator(
+                        city=_crash_city,
+                        state=_crash_state,
+                        center_lat=center_lat,
+                        center_lon=center_lon,
+                        active_drones=active_drones,
+                        text_main=text_main,
+                        text_muted=text_muted,
+                        accent_color=accent_color,
+                        card_bg=card_bg,
+                    )
+                except Exception as e:
+                    st.error(f"Crash simulator unavailable: {str(e)}")
 
         _show_analytics_section = st.toggle(
             "Show CAD Ingestion Analytics",

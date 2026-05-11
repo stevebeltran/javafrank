@@ -181,3 +181,80 @@ class MergeReport(BaseModel):
             if v > info.data["rows_total"]:
                 raise ValueError("rows_ready cannot exceed rows_total")
         return v
+
+
+class FlightTelemetrySnapshot(BaseModel):
+    """
+    Pre-, at-, and post-event flight telemetry for crash analysis.
+
+    Attributes:
+        pre_battery_pct: Battery percentage 60s before event
+        pre_gps_sats: GPS satellites locked before event
+        pre_wind_speed_mph: Wind speed before event
+        pre_motor_rpm_variance_pct: RPM variance across motors (0-100%)
+        impact_g_force: G-force spike at impact
+        altitude_loss_rate_fts: Altitude loss rate (ft/s) at event
+        control_link_active: Was control link active at event
+        parachute_armed: Was parachute armed
+        parachute_deploy_time_ms: Time to deploy parachute after trigger
+        final_altitude_ft: Altitude at landing
+        impact_velocity_mph: Velocity at impact
+        landing_zone_impact_radius_ft: Debris scatter radius
+    """
+    pre_battery_pct: float = Field(..., ge=0.0, le=100.0)
+    pre_gps_sats: int = Field(..., ge=0, le=32)
+    pre_wind_speed_mph: float = Field(..., ge=0.0, le=100.0)
+    pre_motor_rpm_variance_pct: float = Field(..., ge=0.0, le=100.0)
+    impact_g_force: float = Field(..., ge=0.0, le=50.0)
+    altitude_loss_rate_fts: float = Field(..., ge=0.0)
+    control_link_active: bool
+    parachute_armed: bool
+    parachute_deploy_time_ms: float = Field(..., ge=0.0, le=1000.0)
+    final_altitude_ft: float = Field(..., ge=0.0)
+    impact_velocity_mph: float = Field(..., ge=0.0, le=100.0)
+    landing_zone_impact_radius_ft: float = Field(..., ge=0.0, le=500.0)
+
+
+class CrashEvent(BaseModel):
+    """
+    Comprehensive drone crash/incident event record.
+
+    Attributes:
+        event_id: Unique crash event identifier (UUID)
+        event_type: Type of crash event
+        drone_model: BRINC drone model (RESPONDER or GUARDIAN)
+        lat: Crash latitude
+        lon: Crash longitude
+        altitude_ft: Altitude AGL at event
+        airspeed_mph: Airspeed at event
+        timestamp: UTC timestamp of event
+        parachute_deployed: Did parachute deploy
+        parachute_success: Did parachute deployment succeed
+        landing_zone_type: Type of landing zone
+        property_damage_usd: Estimated property damage
+        injuries: Number of injuries
+        injury_severity: Worst injury severity level (AIS)
+        faa_report_required: Computed: true if damage > $500 or serious injury
+        ntsb_report_required: Computed: true if aircraft > 55 lbs (RESPONDER ~13 lbs, GUARDIAN ~18 lbs)
+        cause_classification: Preliminary cause assessment
+    """
+    event_id: str = Field(..., description="UUID format")
+    event_type: Literal["bird_strike", "motor_failure", "battery_failure", "operator_error", "parachute_failure", "weather", "signal_loss"]
+    drone_model: Literal["RESPONDER", "GUARDIAN"]
+    lat: float = Field(..., ge=-90.0, le=90.0)
+    lon: float = Field(..., ge=-180.0, le=180.0)
+    altitude_ft: float = Field(..., ge=0.0, le=500.0, description="AGL")
+    airspeed_mph: float = Field(..., ge=0.0, le=100.0)
+    timestamp: datetime
+    parachute_deployed: bool
+    parachute_success: bool
+    landing_zone_type: Literal["open", "residential", "commercial", "water", "road"]
+    property_damage_usd: float = Field(..., ge=0.0, le=1000000.0)
+    injuries: int = Field(..., ge=0, le=100)
+    injury_severity: Literal["none", "minor", "serious", "fatal"]
+    faa_report_required: bool
+    ntsb_report_required: bool
+    cause_classification: Literal["malfunction", "operator_error", "environmental", "unknown"]
+    telemetry: Optional[FlightTelemetrySnapshot] = None
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)

@@ -1937,7 +1937,6 @@ def render_station_suggestions(st, session_state, suggestions, text_main, text_m
                     f"</div>",
                     unsafe_allow_html=True,
                 )
-                session_state[widget_key] = mode
                 new_mode = st.radio(
                     'Fleet Mode',
                     options=mode_options,
