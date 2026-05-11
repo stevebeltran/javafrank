@@ -1939,7 +1939,6 @@ def render_station_suggestions(st, session_state, suggestions, text_main, text_m
                 )
                 if new_mode != mode:
                     modes[idx] = new_mode
-                    session_state[widget_key] = new_mode
                     changed = True
 
     # Master toggle to hide map markers
