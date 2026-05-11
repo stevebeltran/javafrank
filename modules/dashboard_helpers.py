@@ -1356,14 +1356,18 @@ def manage_custom_stations(
     pinned_guard_names = list(session_state.get('pinned_guard_names', []))
     pinned_resp_names = list(session_state.get('pinned_resp_names', []))
     session_state['show_lock_stations'] = False
-    if len(pinned_guard_names) > k_guardian:
-        st.sidebar.warning(f'Guardian Count was raised to honor {len(pinned_guard_names)} locked Guardian station(s).')
-    if len(pinned_resp_names) > k_responder:
-        st.sidebar.warning(f'Responder Count was raised to honor {len(pinned_resp_names)} locked Responder station(s).')
+
+    # Locks are hard constraints: the effective fleet count cannot fall below
+    # the number of pinned stations for each role.
+    effective_k_guardian = max(int(k_guardian or 0), len(pinned_guard_names))
+    effective_k_responder = max(int(k_responder or 0), len(pinned_resp_names))
+    if effective_k_guardian != k_guardian or effective_k_responder != k_responder:
+        session_state['k_guard'] = effective_k_guardian
+        session_state['k_resp'] = effective_k_responder
 
     return {
-        'k_responder': k_responder,
-        'k_guardian': k_guardian,
+        'k_responder': effective_k_responder,
+        'k_guardian': effective_k_guardian,
         'pinned_guard_names': pinned_guard_names,
         'pinned_resp_names': pinned_resp_names,
         'station_names': station_names,
