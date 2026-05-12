@@ -4512,7 +4512,7 @@ def main():
                             str(exc),
                             tb_text,
                             details={
-                                'source_app': 'Frankenstein',
+                                'source_app': Path(__file__).resolve().parent.name,
                                 'session_id': st.session_state.get('session_id', ''),
                                 'user_email': _get_crash_user_email(),
                                 'city': _city,
@@ -11162,7 +11162,7 @@ if __name__ == "__main__":
                 str(_app_crash_exc),
                 _app_crash_tb,
                 details={
-                    'source_app': 'Frankenstein',
+                    'source_app': Path(__file__).resolve().parent.name,
                     'session_id': st.session_state.get('session_id', ''),
                     'user_email': str(
                         st.session_state.get('google_user_email', '')
