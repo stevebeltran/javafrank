@@ -611,7 +611,7 @@ def render_customer_report(
     <h4 style="color:#00ffcc; margin-top:15px;">Next Steps</h4>
     <ol style="font-size:0.85rem;">
         <li><b>Immediate (0–2 hrs):</b> Secure crash site, preserve evidence, photograph debris field</li>
-        <li><b>Within 24 hrs:</b> Notify {csm.get('name', 'BRINC Customer Success')} — {csm.get('email', 'cs@brincdrones.com')}</li>
+        <li><b>Within 24 hrs:</b> Notify BRINC Customer Success — cs@brincdrones.com</li>
         <li><b>Within 48 hrs:</b> Contact insurance carrier, notify legal team</li>
         <li><b>Within 10 days:</b> Submit FAA report (if required) via DrCASS</li>
         <li><b>Recovery:</b> Open support ticket at {BRINC_SUPPORT_PORTAL}</li>
