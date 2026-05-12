@@ -1037,6 +1037,7 @@ def _make_random_stations(df_calls, n=40, boundary_geom=None, epsg_code=None):
         'lat':  station_lats,
         'lon':  station_lons,
         'type': types,
+        'source': ['CALL_DENSITY'] * k_actual,
     })
 
 @st.cache_data(show_spinner=False)
@@ -1158,6 +1159,7 @@ def _fetch_osm_stations_cached(cen_lat_r: float, cen_lon_r: float, max_stations:
                     'lat': round(float(lat), 6),
                     'lon': round(float(lon), 6),
                     'type': type_label,
+                    'source': 'OSM',
                 }
                 dedupe_key = (row['lat'], row['lon'], row['name'].strip().lower(), row['type'])
                 if dedupe_key in seen:
@@ -1235,7 +1237,7 @@ def _fetch_hifld_stations_cached(min_lat: float, min_lon: float, max_lat: float,
                     continue
                 name = (attrs.get(name_field) or '').strip() or f"{type_label} Station"
                 rows.append({'name': name, 'lat': round(float(lat), 6),
-                             'lon': round(float(lon), 6), 'type': type_label})
+                             'lon': round(float(lon), 6), 'type': type_label, 'source': 'HIFLD'})
             return rows
         except Exception:
             return []
@@ -6478,6 +6480,7 @@ body{{background:transparent;overflow:hidden}}
                 'lat': d_lat, 'lon': d_lon, 'type': d_type, 'cost': cost,
                 'cov_array': cov_array, 'color': map_color,
                 'pinned': _is_pinned,
+                'source': station_metadata[idx].get('source', ''),
                 'deploy_step': step if (idx in chrono_r or idx in chrono_g) else "MANUAL",
                 'avg_time_min': avg_time_min, 'speed_mph': speed_mph, 'radius_m': radius_m,
                 'faa_ceiling': faa_rf.get_station_faa_ceiling(d_lat, d_lon, faa_geojson),
@@ -8509,8 +8512,8 @@ body{{background:transparent;overflow:hidden}}
                 _stype = str(station_type or "").upper()
                 return "Guardian" if "GUARD" in _stype else "Responder"
 
-            def _is_generated_station_name(station_name):
-                _raw = re.sub(r"\s+", " ", str(station_name or "").strip())
+            def _is_call_density_station(station):
+                _raw = re.sub(r"\s+", " ", str((station or {}).get("name") or "").strip())
                 if not _raw:
                     return True
                 if bool(
@@ -8518,22 +8521,17 @@ body{{background:transparent;overflow:hidden}}
                     or st.session_state.get("show_generated_station_names", False)
                 ):
                     return False
+                _source = str((station or {}).get("source") or "").strip().upper()
+                if _source == "CALL_DENSITY":
+                    return True
                 _low = _raw.lower()
                 if _low.startswith("call-density "):
-                    return True
-                if _low in {"station", "police station", "fire station", "school station"}:
-                    return True
-                if re.fullmatch(r"(?:\[[^\]]+\]\s*)?(?:police|fire|school)\s+station\s+\d+\s*", _low):
-                    return True
-                if re.fullmatch(r"station\s+\d+\s*", _low):
-                    return True
-                if _low.startswith("sample ") and " station" in _low:
                     return True
                 return False
 
             def _get_visible_station_rows(station_rows):
                 _rows = list(station_rows or [])
-                _visible = [d for d in _rows if not _is_generated_station_name(d.get("name"))]
+                _visible = [d for d in _rows if not _is_call_density_station(d)]
                 return _visible, max(0, len(_rows) - len(_visible))
 
             def _coverage_band(idx, total):
@@ -9495,7 +9493,7 @@ body{{background:transparent;overflow:hidden}}
                     )
                 )
                 map_html_str = fig_for_export.to_html(full_html=False, include_plotlyjs='cdn', default_height='500px', default_width='100%')
-                _visible_export_rows = [d for d in active_drones if not _is_generated_station_name(d.get("name"))]
+                _visible_export_rows = [d for d in active_drones if not _is_call_density_station(d)]
                 station_rows = "".join(
                     f"<tr><td>{d['name']}</td><td>{d['type']}</td><td>{d['avg_time_min']:.1f} min</td><td>{d['faa_ceiling']}</td><td>${d['cost']:,}</td></tr>"
                     for d in _visible_export_rows

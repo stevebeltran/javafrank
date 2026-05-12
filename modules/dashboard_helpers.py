@@ -733,6 +733,7 @@ def prepare_station_candidates(
                         'lat': glat.ravel(),
                         'lon': glon.ravel(),
                         'type': (['Police', 'Fire', 'School'] * 30)[:len(glat.ravel())],
+                        'source': ['CALL_DENSITY'] * len(glat.ravel()),
                     })
                 except Exception:
                     df_stations_all = pd.DataFrame()

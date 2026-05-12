@@ -866,6 +866,7 @@ def resolve_demo_stations(
         'lat': [point[0] for point in station_points],
         'lon': [point[1] for point in station_points],
         'type': station_types[:len(station_points)],
+        'source': ['CALL_DENSITY'] * len(station_points),
     })
     return fallback_df, False, notices, warnings
 
