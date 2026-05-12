@@ -1809,9 +1809,13 @@ def compute_station_suggestions(
 
     for i in range(n_stations):
         meta = station_metadata[i]
-        solo_call_pct = (np.sum(resp_matrix[i]) / total_calls * 100)
+        # Use the raw haversine-based count here instead of the projected mask.
+        # The Euclidean matrix can slightly over-claim fringe calls and make
+        # central responder sites look like they cover 100% of city calls.
+        raw_calls = int(meta.get('raw_calls_r', np.sum(resp_matrix[i])))
+        solo_call_pct = (raw_calls / total_calls * 100) if total_calls > 0 else 0
         solo_land_pct = (meta['clipped_2m'].area / city_area * 100) if city_area > 0 else 0
-        marginal_calls = int(np.sum(resp_matrix[i]))
+        marginal_calls = raw_calls
         scored.append({
             'station_idx': i,
             'name': meta['name'],
