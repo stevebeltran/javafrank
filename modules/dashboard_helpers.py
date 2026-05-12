@@ -729,7 +729,7 @@ def prepare_station_candidates(
                     grid_lons = np.linspace(lons.quantile(0.1), lons.quantile(0.9), 8)
                     glat, glon = np.meshgrid(grid_lats, grid_lons)
                     df_stations_all = pd.DataFrame({
-                        'name': [f'Station {i+1}' for i in range(len(glat.ravel()))],
+                        'name': [f'Call-Density Station {i+1}' for i in range(len(glat.ravel()))],
                         'lat': glat.ravel(),
                         'lon': glon.ravel(),
                         'type': (['Police', 'Fire', 'School'] * 30)[:len(glat.ravel())],

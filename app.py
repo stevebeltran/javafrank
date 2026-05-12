@@ -1033,7 +1033,7 @@ def _make_random_stations(df_calls, n=40, boundary_geom=None, epsg_code=None):
              ['Fire']   * max(1, math.ceil(k_actual * 0.3)) +
              ['School'] * max(1, math.ceil(k_actual * 0.2)))[:k_actual]
     return pd.DataFrame({
-        'name': [f"{types[i]} Station {i+1}" for i in range(k_actual)],
+        'name': [f"Call-Density {types[i]} Station {i+1}" for i in range(k_actual)],
         'lat':  station_lats,
         'lon':  station_lons,
         'type': types,
@@ -8509,6 +8509,33 @@ body{{background:transparent;overflow:hidden}}
                 _stype = str(station_type or "").upper()
                 return "Guardian" if "GUARD" in _stype else "Responder"
 
+            def _is_generated_station_name(station_name):
+                _raw = re.sub(r"\s+", " ", str(station_name or "").strip())
+                if not _raw:
+                    return True
+                if bool(
+                    st.session_state.get("allow_generated_station_names", False)
+                    or st.session_state.get("show_generated_station_names", False)
+                ):
+                    return False
+                _low = _raw.lower()
+                if _low.startswith("call-density "):
+                    return True
+                if _low in {"station", "police station", "fire station", "school station"}:
+                    return True
+                if re.fullmatch(r"(?:\[[^\]]+\]\s*)?(?:police|fire|school)\s+station\s+\d+\s*", _low):
+                    return True
+                if re.fullmatch(r"station\s+\d+\s*", _low):
+                    return True
+                if _low.startswith("sample ") and " station" in _low:
+                    return True
+                return False
+
+            def _get_visible_station_rows(station_rows):
+                _rows = list(station_rows or [])
+                _visible = [d for d in _rows if not _is_generated_station_name(d.get("name"))]
+                return _visible, max(0, len(_rows) - len(_visible))
+
             def _coverage_band(idx, total):
                 if total <= 1:
                     return "Primary gap closure"
@@ -8520,6 +8547,7 @@ body{{background:transparent;overflow:hidden}}
                     return "Medium"
                 return "Supporting"
 
+            _visible_station_rows, _hidden_station_count = _get_visible_station_rows(active_drones)
             _station_table_rows_html = "".join(
                 f"<tr>"
                 f"<td>{idx + 1}</td>"
@@ -8527,8 +8555,15 @@ body{{background:transparent;overflow:hidden}}
                 f"<td>{_rank_station_role(d.get('type', ''))}</td>"
                 f"<td>{float(d.get('avg_time_min', 0) or 0):.1f} min</td>"
                 f"</tr>"
-                for idx, d in enumerate(active_drones[:6])
+                for idx, d in enumerate(_visible_station_rows[:6])
             ) or "<tr><td colspan='4'>No active stations available for this scenario.</td></tr>"
+            if _hidden_station_count:
+                _station_table_rows_html += (
+                    f"<tr><td colspan='4' style='font-size:12px;color:#6b7280;padding-top:8px;'>"
+                    f"Hidden {_hidden_station_count} call-density generated station"
+                    f"{'s' if _hidden_station_count != 1 else ''}."
+                    f"</td></tr>"
+                )
 
             _why_sites_html = "".join([
                 "<li>Selected from jurisdiction-specific call density and travel geometry</li>",
@@ -9460,7 +9495,11 @@ body{{background:transparent;overflow:hidden}}
                     )
                 )
                 map_html_str = fig_for_export.to_html(full_html=False, include_plotlyjs='cdn', default_height='500px', default_width='100%')
-                station_rows = "".join(f"<tr><td>{d['name']}</td><td>{d['type']}</td><td>{d['avg_time_min']:.1f} min</td><td>{d['faa_ceiling']}</td><td>${d['cost']:,}</td></tr>" for d in active_drones)
+                _visible_export_rows = [d for d in active_drones if not _is_generated_station_name(d.get("name"))]
+                station_rows = "".join(
+                    f"<tr><td>{d['name']}</td><td>{d['type']}</td><td>{d['avg_time_min']:.1f} min</td><td>{d['faa_ceiling']}</td><td>${d['cost']:,}</td></tr>"
+                    for d in _visible_export_rows
+                ) or "<tr><td colspan='5'>No verified real facility names available for this scenario.</td></tr>"
     
                 all_bldgs_rows = ""
                 _type_colors = {

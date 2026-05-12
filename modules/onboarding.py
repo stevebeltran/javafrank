@@ -862,7 +862,7 @@ def resolve_demo_stations(
     station_points = generate_random_points_in_polygon(city_poly, 100)
     station_types = ['Police', 'Fire', 'EMS'] * 34
     fallback_df = pd.DataFrame({
-        'name': [f'Station {i+1}' for i in range(len(station_points))],
+        'name': [f'Call-Density Station {i+1}' for i in range(len(station_points))],
         'lat': [point[0] for point in station_points],
         'lon': [point[1] for point in station_points],
         'type': station_types[:len(station_points)],
