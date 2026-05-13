@@ -9,6 +9,7 @@ import streamlit as st
 import pandas as pd
 import os
 import sys
+import textwrap
 # Set CWD to the project root so every relative asset path (parquets, shapefiles,
 # logos, etc.) resolves correctly regardless of how the process was launched.
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -3555,7 +3556,7 @@ def _render_in_app_faq():
     )
 
     st.markdown(
-        f"""
+        textwrap.dedent(f"""
         <style>
         .faq-float {{
             position: fixed;
@@ -3711,7 +3712,7 @@ def _render_in_app_faq():
                 </div>
             </div>
         </details>
-        """,
+        """),
         unsafe_allow_html=True,
     )
 
