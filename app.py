@@ -3635,14 +3635,14 @@ def _render_live_admin_dashboard():
         <style>
         .live-admin-float {{
             position: fixed;
-            top: calc(78px + env(safe-area-inset-top, 0px));
-            left: calc(14px + env(safe-area-inset-left, 0px));
+            top: 50%;
+            left: 50%;
             z-index: 2147483647;
-            width: min(460px, calc(100vw - 28px));
+            width: min(560px, calc(100vw - 28px));
             font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             margin: 0;
             pointer-events: none;
-            transform: translateZ(0);
+            transform: translate(-50%, -50%) translateZ(0);
         }}
         .live-admin-float > * {{
             pointer-events: auto;
@@ -3704,7 +3704,7 @@ def _render_live_admin_dashboard():
             border-radius: 16px;
             box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
             overflow: hidden;
-            width: min(460px, calc(100vw - 28px));
+            width: min(560px, calc(100vw - 28px));
         }}
         .live-admin-panel-inner {{
             max-height: min(78vh, 760px);
