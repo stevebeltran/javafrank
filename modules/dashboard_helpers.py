@@ -886,7 +886,6 @@ def manage_custom_stations(
 
     k_responder = st.sidebar.slider('🚁 Responder Count', 0, max(1, max_resp_calc), key='k_resp', help='Short-range tactical drones (2-3mi radius).')
     k_guardian = st.sidebar.slider('🦅 Guardian Count', 0, max(1, max_guard_calc), key='k_guard', help='Long-range overwatch drones (5-8mi radius).')
-    session_state.update({'r_resp': resp_radius_mi, 'r_guard': guard_radius_mi})
 
     station_names = df_stations_all['name'].tolist() if not df_stations_all.empty else []
 
