@@ -4037,88 +4037,195 @@ def _render_in_app_faq():
             "Focus on faster situational awareness, broader coverage, clearer station placement decisions, and a stronger story for leadership, grants, and internal planning.",
         ),
     ]
+    _faq_html = [
+        '<div class="faq-shell">',
+        '<div class="faq-intro">Quick answers for customer conversations, workflow, station strategy, deployment planning, and executive positioning.</div>',
+    ]
+    for _question, _answer in _faq_items:
+        _faq_html.append(
+            f'<div class="faq-item"><div class="faq-q">{html.escape(_question)}</div><div class="faq-a">{html.escape(_answer)}</div></div>'
+        )
+    _faq_html.append(
+        f'<div class="faq-footer"><div class="faq-footer-label">Version &amp; Changelog</div><div class="faq-version-line">Current version: {html.escape(__version__)} | Build time: {html.escape(__build_datetime__)}</div>'
+    )
+    for _entry in FAQ_CHANGELOG:
+        _changelog_text = "v{version} | {timestamp} | {summary}".format(
+            version=_entry["version"],
+            timestamp=_entry["timestamp"],
+            summary=_entry["summary"],
+        )
+        _faq_html.append(
+            f'<div class="faq-changelog-line">{html.escape(_changelog_text)}</div>'
+        )
+    _faq_html.append("</div></div>")
 
-    with st.popover("Help / FAQ"):
-        st.markdown(
-            """
+    components.html(
+        textwrap.dedent(
+            f"""
             <style>
-            .faq-shell {
+            .faq-float {{
+                position: fixed;
+                top: calc(14px + env(safe-area-inset-top, 0px));
+                left: calc(14px + env(safe-area-inset-left, 0px));
+                z-index: 2147483646;
+                width: min(680px, calc(100vw - 28px));
+                font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                margin: 0;
+                pointer-events: none;
+                transform: translateZ(0);
+            }}
+            .faq-float > * {{
+                pointer-events: auto;
+            }}
+            .faq-dock {{
+                display: flex;
+                align-items: flex-start;
+                justify-content: flex-start;
+                width: 100%;
+            }}
+            .faq-float summary {{
+                list-style: none;
+                margin: 0;
+            }}
+            .faq-float summary::-webkit-details-marker {{
+                display: none;
+            }}
+            .faq-pill {{
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 12px;
+                border-radius: 999px;
+                background: linear-gradient(180deg, rgba(17, 30, 39, 0.98), rgba(8, 16, 22, 0.96));
+                border: 1px solid rgba(0, 210, 255, 0.72);
+                color: #f4fbff;
+                font-size: 0.78rem;
+                font-weight: 800;
+                letter-spacing: 0.04em;
+                cursor: pointer;
+                box-shadow:
+                    0 0 0 1px rgba(0, 210, 255, 0.14),
+                    0 10px 24px rgba(0, 0, 0, 0.28),
+                    0 0 24px rgba(0, 210, 255, 0.14);
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+            }}
+            .faq-pill:hover {{
+                transform: translateY(-1px);
+                border-color: rgba(102, 230, 255, 0.96);
+                background: linear-gradient(180deg, rgba(22, 42, 54, 0.99), rgba(10, 21, 28, 0.98));
+                box-shadow:
+                    0 0 0 1px rgba(0, 210, 255, 0.18),
+                    0 12px 28px rgba(0, 0, 0, 0.34),
+                    0 0 28px rgba(0, 210, 255, 0.2);
+            }}
+            .faq-pill::before {{
+                content: "?";
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 18px;
+                height: 18px;
+                border-radius: 999px;
+                background: rgba(0, 210, 255, 0.12);
+                border: 1px solid rgba(0, 210, 255, 0.72);
+                color: #8be9ff;
+                font-size: 0.76rem;
+                font-weight: 900;
+                line-height: 1;
+                flex: 0 0 auto;
+            }}
+            .faq-panel {{
+                margin-top: 8px;
+                background: rgba(7, 11, 18, 0.97);
+                border: 1px solid rgba(0, 210, 255, 0.2);
+                border-radius: 16px;
+                box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
+                overflow: hidden;
+                width: min(560px, calc(100vw - 28px));
+            }}
+            .faq-panel-inner {{
+                max-height: min(78vh, 760px);
+                overflow-y: auto;
+                padding: 14px 14px 12px;
+            }}
+            .faq-shell {{
                 padding: 2px 0 0;
-            }
-            .faq-intro {
+            }}
+            .faq-intro {{
                 color: rgba(235, 242, 248, 0.78);
                 font-size: 0.84rem;
                 line-height: 1.45;
                 margin: 0 0 12px;
-            }
-            .faq-item {
+            }}
+            .faq-item {{
                 padding: 10px 0 11px;
                 border-top: 1px solid rgba(116, 255, 186, 0.14);
-            }
-            .faq-item:first-of-type {
+            }}
+            .faq-item:first-of-type {{
                 border-top: 0;
                 padding-top: 0;
-            }
-            .faq-q {
+            }}
+            .faq-q {{
                 color: #f5fff8;
                 font-size: 0.93rem;
                 font-weight: 800;
                 line-height: 1.35;
                 margin-bottom: 4px;
-            }
-            .faq-a {
+            }}
+            .faq-a {{
                 color: rgba(225, 236, 242, 0.84);
                 font-size: 0.83rem;
                 line-height: 1.48;
-            }
-            .faq-footer {
+            }}
+            .faq-footer {{
                 margin-top: 14px;
                 padding-top: 10px;
                 border-top: 1px solid rgba(116, 255, 186, 0.18);
-            }
-            .faq-footer-label {
+            }}
+            .faq-footer-label {{
                 color: #7cffc9;
                 font-size: 0.68rem;
                 font-weight: 800;
                 letter-spacing: 0.08em;
                 text-transform: uppercase;
                 margin-bottom: 6px;
-            }
+            }}
             .faq-version-line,
-            .faq-changelog-line {
+            .faq-changelog-line {{
                 color: rgba(225, 236, 242, 0.78);
                 font-size: 0.73rem;
                 line-height: 1.4;
-            }
-            .faq-changelog-line {
+            }}
+            .faq-changelog-line {{
                 margin-top: 4px;
-            }
+            }}
+            @media (max-width: 700px) {{
+                .faq-float {{
+                    width: calc(100vw - 28px);
+                }}
+                .faq-panel {{
+                    width: calc(100vw - 28px);
+                }}
+            }}
             </style>
-            """,
-            unsafe_allow_html=True,
-        )
-        _faq_html = [
-            '<div class="faq-shell">',
-            '<div class="faq-intro">Quick answers for customer conversations, workflow, station strategy, deployment planning, and executive positioning.</div>',
-        ]
-        for _question, _answer in _faq_items:
-            _faq_html.append(
-                f'<div class="faq-item"><div class="faq-q">{html.escape(_question)}</div><div class="faq-a">{html.escape(_answer)}</div></div>'
-            )
-        _faq_html.append(
-            f'<div class="faq-footer"><div class="faq-footer-label">Version &amp; Changelog</div><div class="faq-version-line">Current version: {html.escape(__version__)} | Build time: {html.escape(__build_datetime__)}</div>'
-        )
-        for _entry in FAQ_CHANGELOG:
-            _changelog_text = "v{version} | {timestamp} | {summary}".format(
-                version=_entry["version"],
-                timestamp=_entry["timestamp"],
-                summary=_entry["summary"],
-            )
-            _faq_html.append(
-                f'<div class="faq-changelog-line">{html.escape(_changelog_text)}</div>'
-            )
-        _faq_html.append("</div></div>")
-        st.markdown("".join(_faq_html), unsafe_allow_html=True)
+            <div class="faq-float">
+                <div class="faq-dock">
+                    <details>
+                        <summary class="faq-pill">Help / FAQ</summary>
+                        <div class="faq-panel">
+                            <div class="faq-panel-inner">
+                                {"".join(_faq_html)}
+                            </div>
+                        </div>
+                    </details>
+                </div>
+            </div>
+            """
+        ),
+        height=0,
+    )
 
 
 def main():
