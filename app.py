@@ -3651,6 +3651,21 @@ def _render_live_admin_dashboard():
         return
 
     _active_sessions = _prune_active_sessions()
+    _current_session_id = str(st.session_state.get("session_id", "") or "").strip()
+    _has_other_sessions = any(
+        str(_item.get("session_id", "") or "").strip() != _current_session_id
+        for _item in _active_sessions
+    )
+    _pill_accent = "rgba(255, 77, 77, 0.92)" if _has_other_sessions else "rgba(0, 255, 170, 0.72)"
+    _pill_accent_soft = "rgba(255, 77, 77, 0.18)" if _has_other_sessions else "rgba(0, 255, 170, 0.14)"
+    _pill_accent_text = "#ff9b9b" if _has_other_sessions else "#7cffc9"
+    _pill_bg_top = "rgba(34, 7, 10, 0.98)" if _has_other_sessions else "rgba(10, 20, 10, 0.98)"
+    _pill_bg_bottom = "rgba(22, 6, 8, 0.96)" if _has_other_sessions else "rgba(6, 14, 8, 0.96)"
+    _pill_hover_top = "rgba(46, 10, 14, 0.99)" if _has_other_sessions else "rgba(12, 30, 18, 0.99)"
+    _pill_hover_bottom = "rgba(28, 7, 10, 0.98)" if _has_other_sessions else "rgba(7, 16, 10, 0.98)"
+    _pill_shadow = "rgba(255, 77, 77, 0.16)" if _has_other_sessions else "rgba(0, 255, 170, 0.14)"
+    _pill_shadow_hover = "rgba(255, 77, 77, 0.22)" if _has_other_sessions else "rgba(0, 255, 170, 0.2)"
+    _panel_border = "rgba(255, 77, 77, 0.26)" if _has_other_sessions else "rgba(0, 255, 170, 0.22)"
     _count = len(_active_sessions)
     _rows = []
     for _item in _active_sessions[:12]:
@@ -3705,27 +3720,27 @@ def _render_live_admin_dashboard():
             gap: 8px;
             padding: 8px 12px;
             border-radius: 999px;
-            background: linear-gradient(180deg, rgba(10, 20, 10, 0.98), rgba(6, 14, 8, 0.96));
-            border: 1px solid rgba(0, 255, 170, 0.72);
+            background: linear-gradient(180deg, {_pill_bg_top}, {_pill_bg_bottom});
+            border: 1px solid {_pill_accent};
             color: #f4fff8;
             font-size: 0.78rem;
             font-weight: 800;
             letter-spacing: 0.04em;
             cursor: pointer;
             box-shadow:
-                0 0 0 1px rgba(0, 255, 170, 0.14),
+                0 0 0 1px {_pill_accent_soft},
                 0 10px 24px rgba(0, 0, 0, 0.28),
-                0 0 24px rgba(0, 255, 170, 0.14);
+                0 0 24px {_pill_shadow};
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
         }}
         .live-admin-pill:hover {{
-            border-color: rgba(0, 255, 170, 0.95);
-            background: linear-gradient(180deg, rgba(12, 30, 18, 0.99), rgba(7, 16, 10, 0.98));
+            border-color: {_pill_accent};
+            background: linear-gradient(180deg, {_pill_hover_top}, {_pill_hover_bottom});
             box-shadow:
-                0 0 0 1px rgba(0, 255, 170, 0.22),
+                0 0 0 1px {_pill_accent_soft},
                 0 12px 28px rgba(0, 0, 0, 0.34),
-                0 0 28px rgba(0, 255, 170, 0.2);
+                0 0 28px {_pill_shadow_hover};
         }}
         .live-admin-pill::before {{
             content: "●";
@@ -3735,9 +3750,9 @@ def _render_live_admin_dashboard():
             width: 18px;
             height: 18px;
             border-radius: 999px;
-            background: rgba(0, 255, 170, 0.14);
-            border: 1px solid rgba(0, 255, 170, 0.38);
-            color: #7cffc9;
+            background: {_pill_accent_soft};
+            border: 1px solid {_pill_accent};
+            color: {_pill_accent_text};
             font-size: 0.7rem;
             line-height: 1;
             flex: 0 0 auto;
@@ -3745,7 +3760,7 @@ def _render_live_admin_dashboard():
         .live-admin-panel {{
             margin-top: 8px;
             background: rgba(7, 11, 18, 0.97);
-            border: 1px solid rgba(0, 255, 170, 0.22);
+            border: 1px solid {_panel_border};
             border-radius: 16px;
             box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
             overflow: hidden;
