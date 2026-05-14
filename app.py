@@ -4080,7 +4080,7 @@ def _render_in_app_faq():
             .faq-dock {{
                 display: flex;
                 align-items: flex-start;
-                justify-content: flex-start;
+                justify-content: center;
                 width: 100%;
             }}
             .faq-float summary {{
