@@ -3961,7 +3961,7 @@ def _render_in_app_faq():
         for _entry in FAQ_CHANGELOG
     )
 
-    st.html(
+    components.html(
         textwrap.dedent(f"""
         <style>
         .faq-float {{
