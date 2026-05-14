@@ -1884,6 +1884,27 @@ def compute_station_suggestions(
     return suggestions
 
 
+def sync_station_suggestion_modes(session_state, suggestions):
+    """Keep suggestion mode state aligned with live widget values."""
+    if not suggestions:
+        return {}
+
+    existing_modes = session_state.get('suggestion_modes', {}) or {}
+    synced_modes = {}
+    for s in suggestions:
+        idx = s['station_idx']
+        widget_key = f"suggest_mode_{idx}"
+        default_mode = s['role'] if s['rank'] <= 3 else 'Off'
+        mode = session_state.get(widget_key, existing_modes.get(idx, default_mode))
+        if mode not in ('Guardian', 'Responder', 'Off'):
+            mode = 'Off'
+        synced_modes[idx] = mode
+
+    session_state['suggestion_modes'] = synced_modes
+    session_state['suggestion_toggles'] = {idx: (mode != 'Off') for idx, mode in synced_modes.items()}
+    return synced_modes
+
+
 def render_station_suggestions(st, session_state, suggestions, text_main, text_muted,
                                card_bg, card_border, accent_color, source_label='public data'):
     """Render a compact 2×5 suggestion card grid below the map.
@@ -2012,4 +2033,130 @@ def render_station_suggestions(st, session_state, suggestions, text_main, text_m
 
     session_state['suggestion_modes'] = modes
     session_state['suggestion_toggles'] = {idx: (mode != 'Off') for idx, mode in modes.items()}
+    return changed
+
+
+def render_station_suggestions_grid(st, session_state, suggestions, text_main, text_muted,
+                                    card_bg, card_border, accent_color, source_label='public data'):
+    """Render station suggestions with synced widget state and a fixed 5-column grid."""
+    if not suggestions:
+        return False
+
+    mode_options = ['Guardian', 'Responder', 'Off']
+    if 'suggestion_modes' not in session_state:
+        if 'suggestion_toggles' in session_state:
+            session_state['suggestion_modes'] = {
+                s['station_idx']: (
+                    s['role'] if session_state['suggestion_toggles'].get(s['station_idx']) else 'Off'
+                )
+                for s in suggestions
+            }
+        else:
+            session_state['suggestion_modes'] = {
+                s['station_idx']: (s['role'] if s['rank'] <= 3 else 'Off')
+                for s in suggestions
+            }
+    else:
+        session_state['suggestion_modes'] = {
+            s['station_idx']: session_state['suggestion_modes'].get(
+                s['station_idx'],
+                s['role'] if s['rank'] <= 3 else 'Off',
+            )
+            for s in suggestions
+        }
+    if 'show_suggestion_markers' not in session_state:
+        session_state['show_suggestion_markers'] = True
+    source_label = session_state.get('station_suggestions_source', source_label)
+
+    modes = sync_station_suggestion_modes(session_state, suggestions)
+    changed = False
+
+    n_on = sum(1 for v in modes.values() if v != 'Off')
+    st.markdown(
+        f"<div style='margin-top:12px; margin-bottom:6px; display:flex; align-items:center; "
+        f"justify-content:space-between;'>"
+        f"<span style='font-size:0.85rem; font-weight:700; color:{text_main};'>"
+        f"Suggested Station Placements"
+        f"<span style='font-size:0.7rem; font-weight:400; color:{text_muted}; margin-left:8px;'>"
+        f"({n_on} shown from {source_label})</span></span></div>",
+        unsafe_allow_html=True,
+    )
+    st.caption('Click a card to compare role assignment. These suggestions are advisory only and do not force the deployment objective or lock the optimizer.')
+
+    st.markdown(
+        """
+        <style>
+        section.main div[data-testid="stRadio"] div[role="radiogroup"] {
+            gap: 0.08rem !important;
+            flex-wrap: nowrap !important;
+        }
+        section.main div[data-testid="stRadio"] label,
+        section.main div[data-testid="stRadio"] label p,
+        section.main div[data-testid="stRadio"] label span {
+            font-size: 0.46rem !important;
+            line-height: 0.95 !important;
+            white-space: nowrap !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    for row_start in range(0, len(suggestions), 5):
+        row_items = suggestions[row_start:row_start + 5]
+        cols = st.columns(5, gap="small")
+        for ci in range(5):
+            s = row_items[ci] if ci < len(row_items) else None
+            with cols[ci]:
+                if s is None:
+                    st.markdown("<div style='min-height:112px;'></div>", unsafe_allow_html=True)
+                    continue
+
+                idx = s['station_idx']
+                mode = modes.get(idx, 'Off')
+                mode_color = '#FFD700' if mode == 'Guardian' else '#00D2FF' if mode == 'Responder' else '#9aa0b4'
+                mode_abbr = 'G' if mode == 'Guardian' else 'R' if mode == 'Responder' else 'O'
+                border_col = mode_color if mode != 'Off' else card_border
+                bg = card_bg if mode != 'Off' else 'rgba(30,30,40,0.4)'
+                opacity = '1.0' if mode != 'Off' else '0.55'
+                widget_key = f"suggest_mode_{idx}"
+                display_text = s.get('address', '') or s['name']
+
+                st.markdown(
+                    f"<div style='border:1px solid {border_col}; border-radius:6px; "
+                    f"padding:6px 8px; background:{bg}; opacity:{opacity}; "
+                    f"min-height:72px; font-size:0.7rem; line-height:1.3;'>"
+                    f"<div style='display:flex; justify-content:space-between; align-items:center;'>"
+                    f"<span style='font-weight:700; color:{text_main};'>#{s['rank']}</span>"
+                    f"<span style='background:{mode_color}; color:#000; font-size:0.55rem; "
+                    f"font-weight:800; padding:1px 5px; border-radius:3px;'>{mode_abbr}</span></div>"
+                    f"<div style='color:{text_main}; font-weight:600; margin:2px 0; word-wrap:break-word; white-space:normal;'>"
+                    f"{display_text}</div>"
+                    f"<div style='color:{text_muted}; font-size:0.62rem;'>"
+                    f"📞 {s['call_pct']}% calls · 🗺️ {s['land_pct']}% land</div>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+                new_mode = st.radio(
+                    'Fleet Mode',
+                    options=mode_options,
+                    index=mode_options.index(mode) if mode in mode_options else 2,
+                    key=widget_key,
+                    horizontal=True,
+                    label_visibility="collapsed",
+                )
+                if new_mode != mode:
+                    modes[idx] = new_mode
+                    changed = True
+
+    show_markers = st.checkbox(
+        'Show suggested locations on map',
+        value=session_state.get('show_suggestion_markers', True),
+        key='_suggest_markers_toggle',
+    )
+    if show_markers != session_state.get('show_suggestion_markers', True):
+        session_state['show_suggestion_markers'] = show_markers
+        changed = True
+
+    sync_station_suggestion_modes(session_state, suggestions)
     return changed
