@@ -332,7 +332,9 @@ def _notify_crash_email(step, error_message, traceback_text, details=None):
         gmail_address = st.secrets.get("GMAIL_ADDRESS", "")
         app_password = st.secrets.get("GMAIL_APP_PASSWORD", "")
         notify_address = st.secrets.get("NOTIFY_EMAIL", gmail_address)
-        if not gmail_address or not app_password or not notify_address:
+        sms_address = st.secrets.get("NOTIFY_SMS_EMAIL", "")
+        recipients = _split_recipients([notify_address, sms_address])
+        if not gmail_address or not app_password or not recipients:
             return
 
         d = details or {}
@@ -376,11 +378,13 @@ def _notify_crash_email(step, error_message, traceback_text, details=None):
         </body></html>
         """
         msg = MIMEMultipart("alternative")
-        msg["Subject"], msg["From"], msg["To"] = subject, gmail_address, notify_address
+        msg["Subject"], msg["From"], msg["To"] = subject, gmail_address, recipients[0]
+        if len(recipients) > 1:
+            msg["Cc"] = ", ".join(recipients[1:])
         msg.attach(MIMEText(body, "html"))
         with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=8) as server:
             server.login(gmail_address, app_password)
-            server.sendmail(gmail_address, notify_address, msg.as_string())
+            server.sendmail(gmail_address, recipients, msg.as_string())
     except:
         pass
 
