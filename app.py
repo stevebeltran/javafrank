@@ -3727,13 +3727,13 @@ def _render_live_admin_dashboard():
         _rows_html = "".join(_rows)
 
     _stale_seconds = int(_ACTIVE_SESSION_TTL_SECONDS)
-    components.html(
+    st.html(
         textwrap.dedent(f"""
         <style>
         .live-admin-float {{
             position: fixed;
             top: calc(14px + env(safe-area-inset-top, 0px));
-            left: min(calc(14px + 470px + 16px), calc(100vw - 560px - 14px));
+            right: calc(14px + env(safe-area-inset-right, 0px));
             z-index: 2147483647;
             width: min(680px, calc(100vw - 28px));
             font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -3949,7 +3949,6 @@ def _render_live_admin_dashboard():
         </style>
         <div class="live-admin-float">
             <div class="live-admin-dock">
-                <a class="live-admin-quickjump" href="?admin_jump=rockford_il" target="_self" rel="noopener noreferrer">Rockford, IL</a>
                 <details>
                     <summary class="live-admin-pill">Live Users</summary>
                     <div class="live-admin-panel">
@@ -4123,9 +4122,12 @@ def _render_in_app_faq():
 
 
 def main():
-    _render_in_app_faq()
+    _top_spacer_col, _top_faq_col, _top_live_col = st.columns([10, 1, 1], gap="small")
+    with _top_faq_col:
+        _render_in_app_faq()
+    with _top_live_col:
+        _live_admin_dashboard_fragment()
     _presence_heartbeat_fragment()
-    _live_admin_dashboard_fragment()
     if not st.session_state['csvs_ready']:
 
         # GRAB THE LOGO FOR THE UPLOAD PAGE
@@ -7372,17 +7374,6 @@ body{{background:transparent;overflow:hidden}}
                 <span style="color:{card_border};">|</span>
                 <span style="font-weight: 800; color: {text_main}; font-size: 0.95rem;">{actual_k_responder} <span style="color:#888; font-weight:normal;">Resp</span> · {actual_k_guardian} <span style="color:#888; font-weight:normal;">Guard</span></span>
                 <span style="background:#0066aa;border:1px solid #00D2FF;border-radius:4px;padding:3px 8px;font-size:0.75rem;font-weight:700;color:#00D2FF;letter-spacing:0.5px;text-transform:uppercase;">{_tier_badge}</span>
-                {(
-                    '<a href="?admin_jump=rockford_il" target="_self" rel="noopener noreferrer" '
-                    'style="display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; '
-                    'border:1px solid rgba(0, 255, 170, 0.72); background:linear-gradient(180deg, rgba(17, 33, 18, 0.98), rgba(8, 18, 10, 0.96)); '
-                    'color:#ecfff5; font-size:0.72rem; font-weight:800; letter-spacing:0.04em; text-decoration:none; white-space:nowrap; '
-                    'box-shadow:0 0 0 1px rgba(0, 255, 170, 0.14), 0 8px 20px rgba(0, 0, 0, 0.18);">'
-                    'One-click Rockford, IL</a>'
-                    if str(st.session_state.get("active_city", "") or "").strip().lower() == "rockford"
-                    and str(st.session_state.get("active_state", "") or "").strip().upper() == "IL"
-                    else ""
-                )}
                 {main_logo_html}
             </div>
         </div>
