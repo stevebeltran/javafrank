@@ -146,7 +146,6 @@ def restore_brinc_session(session_state, save_data):
             stations_df['lon'] = pd.to_numeric(stations_df['lon'], errors='coerce')
             stations_df = stations_df.dropna(subset=['lat', 'lon']).reset_index(drop=True)
             session_state['df_stations'] = stations_df
-            session_state['stations_user_uploaded'] = True
 
     session_state['boundary_kind'] = save_data.get('boundary_kind', 'place')
     session_state['boundary_source_path'] = save_data.get('boundary_source_path', '')

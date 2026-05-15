@@ -5707,7 +5707,7 @@ def main():
                 st.session_state['demo_mode_used'] = True
                 st.rerun()
 
-            city_chips = "  ·  ".join([f"{c}" for c, _ in DEMO_CITIES[:12]]) + "  · and more…"
+            city_chips = "  ·  ".join([f"{c}" for c, _ in FAST_DEMO_CITIES])
             st.markdown(f"""
             <div class="demo-cities">
                 <b>Available Cities</b><br>
@@ -6200,19 +6200,78 @@ body{{background:transparent;overflow:hidden}}
                 st.toast(f"✅ {_active_hw} · {_hw_state} · {_corridor_miles:.0f} mi · {annual_cfs:,} calls/yr")
 
             else:
-                all_gdfs, boundary_records, total_estimated_pop, boundary_messages, boundary_warnings, rerun_demo_target, all_populations_verified = build_demo_boundaries(
-                    st.session_state,
-                    active_targets,
-                    STATE_FIPS,
-                    KNOWN_POPULATIONS,
-                    DEMO_CITIES,
-                    fetch_county_boundary_local,
-                    fetch_place_boundary_local,
-                    fetch_tiger_state_shapefile,
-                    save_boundary_gdf,
-                    fetch_census_population,
-                    fetch_census_state_population,
+                fast_demo_target_set = {(city, state) for city, state in FAST_DEMO_CITIES}
+                is_fast_demo_path = bool(active_targets) and all(
+                    (str(loc.get('city', '') or '').strip(), str(loc.get('state', '') or '').strip().upper())
+                    in fast_demo_target_set
+                    for loc in active_targets
                 )
+                if is_fast_demo_path:
+                    all_gdfs = []
+                    boundary_records = []
+                    total_estimated_pop = 0
+                    boundary_messages = []
+                    boundary_warnings = []
+                    rerun_demo_target = None
+                    all_populations_verified = True
+                    for index, loc in enumerate(active_targets):
+                        city_name = str(loc.get('city', '') or '').strip()
+                        state_name = str(loc.get('state', '') or '').strip().upper()
+                        success, temp_gdf = fetch_place_boundary_local(state_name, city_name)
+                        boundary_kind = 'place'
+                        if not success:
+                            success, temp_gdf = fetch_county_boundary_local(state_name, city_name)
+                            if not success:
+                                success, temp_gdf = fetch_county_boundary_local(state_name, f"{city_name} County")
+                            if success:
+                                boundary_kind = 'county'
+                        if success and temp_gdf is not None:
+                            saved_path = save_boundary_gdf(temp_gdf, boundary_kind, city_name, state_name)
+                            if index == 0:
+                                st.session_state['boundary_source_path'] = saved_path or ''
+                            all_gdfs.append(temp_gdf)
+                            population = int(KNOWN_POPULATIONS.get(city_name, 0) or 0)
+                            total_estimated_pop += population
+                            boundary_messages.append(f"✅ {city_name or state_name} population loaded from local cache: {population:,}")
+                            boundary_records.append({
+                                'name': city_name or state_name,
+                                'state': state_name,
+                                'boundary_kind': boundary_kind,
+                                'population': population,
+                                'geometry': temp_gdf.geometry.union_all(),
+                            })
+                        else:
+                            boundary_warnings.append(f"⚠️ Missing preloaded boundary for {city_name or state_name}, {state_name}.")
+                    if not all_gdfs:
+                        prog.empty()
+                        components.html("""<!DOCTYPE html><html><head></head><body><script>
+(function(){
+  var doc=parent.document;
+  if(parent._brincFloWd){parent.clearInterval(parent._brincFloWd);parent._brincFloWd=null;}
+  var el=doc.getElementById('brinc-flo');
+  if(el){el.style.transition='opacity 0.35s ease';el.style.opacity='0';
+    parent.setTimeout(function(){
+      var e=doc.getElementById('brinc-flo');if(e&&e.parentNode)e.parentNode.removeChild(e);
+      var s=doc.getElementById('brinc-flo-css');if(s&&s.parentNode)s.parentNode.removeChild(s);
+    },360);}
+})();
+</script></body></html>""", height=0, scrolling=False)
+                        st.error("❌ Could not load the preloaded demo boundaries.")
+                        st.stop()
+                else:
+                    all_gdfs, boundary_records, total_estimated_pop, boundary_messages, boundary_warnings, rerun_demo_target, all_populations_verified = build_demo_boundaries(
+                        st.session_state,
+                        active_targets,
+                        STATE_FIPS,
+                        KNOWN_POPULATIONS,
+                        DEMO_CITIES,
+                        fetch_county_boundary_local,
+                        fetch_place_boundary_local,
+                        fetch_tiger_state_shapefile,
+                        save_boundary_gdf,
+                        fetch_census_population,
+                        fetch_census_state_population,
+                    )
                 for _msg in boundary_messages:
                     st.toast(_msg)
                 for _warn in boundary_warnings:
@@ -6280,16 +6339,30 @@ body{{background:transparent;overflow:hidden}}
             st.session_state['total_modeled_calls'] = len(df_demo)
 
             prog.progress(80, text="Loading simulation stations...")
-            stations_df, stations_user_uploaded, station_notices, station_warnings = resolve_demo_stations(
-                st.session_state['df_calls'],
-                city_poly,
-                _sim_station_file,
-                active_targets,
-                forward_geocode,
-                search_public_facility_candidates,
-                generate_stations_from_calls,
-                generate_random_points_in_polygon,
-            )
+            if is_fast_demo_path:
+                station_points = generate_random_points_in_polygon(city_poly, 100)
+                station_types = ['Police', 'Fire', 'EMS'] * 34
+                stations_df = pd.DataFrame({
+                    'name': [f'Preloaded Demo Station {i+1}' for i in range(len(station_points))],
+                    'lat': [point[0] for point in station_points],
+                    'lon': [point[1] for point in station_points],
+                    'type': station_types[:len(station_points)],
+                    'source': ['PRELOADED_DEMO'] * len(station_points),
+                })
+                stations_user_uploaded = False
+                station_notices = ["Loaded precomputed demo stations from local cache."]
+                station_warnings = []
+            else:
+                stations_df, stations_user_uploaded, station_notices, station_warnings = resolve_demo_stations(
+                    st.session_state['df_calls'],
+                    city_poly,
+                    _sim_station_file,
+                    active_targets,
+                    forward_geocode,
+                    search_public_facility_candidates,
+                    generate_stations_from_calls,
+                    generate_random_points_in_polygon,
+                )
             for _notice in station_notices:
                 st.toast(_notice)
             for _warning in station_warnings:

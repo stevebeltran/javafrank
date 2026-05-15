@@ -9,24 +9,11 @@ import os
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import streamlit as st
 from shapely.geometry import box
 from shapely.ops import unary_union
 
 from modules.config import calculate_max_flights_per_day, US_STATES_ABBR, text_muted
 from modules.versioning import __version__ as _app_version
-
-
-@st.cache_resource(show_spinner=False)
-def _load_boundary_gdf_cached(boundary_path, boundary_mtime, boundary_size):
-    """Load a saved boundary once and reuse it across reruns for the same file."""
-    try:
-        gdf = gpd.read_file(boundary_path)
-        if gdf.crs is None:
-            gdf = gdf.set_crs(epsg=4269)
-        return gdf.to_crs(epsg=4326)
-    except Exception:
-        return None
 
 
 def log_map_build_event_once(session_state, log_to_sheets):
@@ -224,25 +211,10 @@ def resolve_master_boundary(
                         master_gdf = None
                         raise ValueError('No overlapping shapefiles found')
 
-                try:
-                    best_stat = os.stat(best)
-                except OSError:
-                    best_stat = None
-
-                # Lazy-load the selected county/parish file and keep the parsed
-                # GeoDataFrame cached for the next rerun.
-                fallback_gdf = (
-                    _load_boundary_gdf_cached(best, best_stat.st_mtime, best_stat.st_size)
-                    if best_stat is not None
-                    else None
-                )
-                if fallback_gdf is None:
-                    fallback_gdf = gpd.read_file(best)
-                    if fallback_gdf.crs is None:
-                        fallback_gdf = fallback_gdf.set_crs(epsg=4269)
-                    fallback_gdf = fallback_gdf.to_crs(epsg=4326)
-                else:
-                    fallback_gdf = fallback_gdf.copy()
+                fallback_gdf = gpd.read_file(best)
+                if fallback_gdf.crs is None:
+                    fallback_gdf = fallback_gdf.set_crs(epsg=4269)
+                fallback_gdf = fallback_gdf.to_crs(epsg=4326)
                 name_col = next(
                     (column for column in ['NAME', 'DISTRICT', 'NAMELSAD'] if column in fallback_gdf.columns),
                     fallback_gdf.columns[0],
@@ -333,8 +305,22 @@ def render_sidebar_jurisdiction_selector(
                 st.sidebar.warning(sidebar_overlay_status['message'])
 
     master_gdf = master_gdf.copy()
-    total_pts = master_gdf['data_count'].sum()
-    master_gdf['LABEL'] = master_gdf['DISPLAY_NAME'] + ' (' + (master_gdf['data_count'] / total_pts * 100).round(1).astype(str) + '%)'
+    if 'DISPLAY_NAME' not in master_gdf.columns:
+        master_gdf['DISPLAY_NAME'] = master_gdf.index.astype(str)
+    if 'data_count' not in master_gdf.columns:
+        master_gdf['data_count'] = 1
+    else:
+        master_gdf['data_count'] = pd.to_numeric(master_gdf['data_count'], errors='coerce').fillna(0)
+        if float(master_gdf['data_count'].sum() or 0) <= 0:
+            master_gdf['data_count'] = 1
+
+    total_pts = float(master_gdf['data_count'].sum() or len(master_gdf) or 1)
+    master_gdf['LABEL'] = (
+        master_gdf['DISPLAY_NAME'].astype(str)
+        + ' ('
+        + (master_gdf['data_count'] / total_pts * 100).round(1).astype(str)
+        + '%)'
+    )
     options_map = dict(zip(master_gdf['LABEL'], master_gdf['DISPLAY_NAME']))
     all_options = master_gdf['LABEL'].tolist()
     default_selection = [all_options[0]] if all_options else []

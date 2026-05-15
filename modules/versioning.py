@@ -76,16 +76,34 @@ def _git_revision():
 
 def _sync_build_meta():
     """
-    Return the committed build metadata.
+    Advance the revision when app.py has been saved since the last recorded build.
 
-    The .build_meta file is treated as the release marker so mirrored repos can
-    show the same version string even when their git histories differ.
+    This gives a monotonic revision number that increases by 1 whenever app.py
+    changes, instead of only reflecting a read-only timestamp.
     """
+    _app_mtime = float(_APP_PATH.stat().st_mtime)
     _stored_mtime, _stored_revision = _read_build_meta()
+    _git_revision_value = _git_revision()
+
+    if _git_revision_value is not None:
+        _revision = max(_stored_revision, _git_revision_value)
+        if abs(_app_mtime - _stored_mtime) > 1e-9 or _revision != _stored_revision:
+            _write_build_meta(_app_mtime, _revision)
+        return _app_mtime, _revision
+
     if _stored_mtime <= 0:
-        _stored_mtime = float(_APP_PATH.stat().st_mtime)
-        _stored_revision = 1
-        _write_build_meta(_stored_mtime, _stored_revision)
+        _write_build_meta(_app_mtime, 1)
+        return _app_mtime, 1
+
+    # Preserve the highest revision even if app.py is restored with an older mtime.
+    if _app_mtime < (_stored_mtime - 1e-9):
+        _write_build_meta(_app_mtime, _stored_revision)
+        return _app_mtime, _stored_revision
+
+    if _app_mtime > (_stored_mtime + 1e-9):
+        _stored_revision += 1
+        _write_build_meta(_app_mtime, _stored_revision)
+        return _app_mtime, _stored_revision
 
     return _stored_mtime, _stored_revision
 
