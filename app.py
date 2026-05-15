@@ -9600,6 +9600,13 @@ body{{background:transparent;overflow:hidden}}
                     _acknowledge_crash_notice(_recent_crash_notice)
                     st.session_state["_show_recent_crash_notice"] = False
                     st.rerun()
+        _mgdf_export = st.session_state.get('master_gdf_override')
+        _boundary_geojson_export = None
+        if _mgdf_export is not None and not _mgdf_export.empty:
+            try:
+                _boundary_geojson_export = _mgdf_export.to_crs(epsg=4326).to_json()
+            except Exception:
+                _boundary_geojson_export = None
         export_dict = {
             "city": prop_city,
             "state": prop_state,
@@ -9630,7 +9637,7 @@ body{{background:transparent;overflow:hidden}}
             ),
             "stations_data": html_reports._safe_df_to_records(st.session_state.get('df_stations')),
             "faa_geojson": faa_geojson,
-            "boundary_geojson": None,
+            "boundary_geojson": _boundary_geojson_export,
             "boundary_kind": st.session_state.get('boundary_kind', 'place'),
             "boundary_source_path": st.session_state.get('boundary_source_path', ''),
             "brinc_user": st.session_state.get('brinc_user', ''),
@@ -9780,14 +9787,6 @@ body{{background:transparent;overflow:hidden}}
                     "annual_savings":  d.get('annual_savings', 0),
                 } for d in active_drones],
             }
-
-            _mgdf_export = st.session_state.get('master_gdf_override')
-            _boundary_geojson_export = None
-            if _mgdf_export is not None and not _mgdf_export.empty:
-                try:
-                    _boundary_geojson_export = _mgdf_export.to_crs(epsg=4326).to_json()
-                except Exception:
-                    _boundary_geojson_export = None
 
             _custom_export_df = st.session_state.get('custom_stations', pd.DataFrame())
             _stations_export_df = st.session_state.get('df_stations')

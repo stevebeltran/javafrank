@@ -6,6 +6,7 @@ import os
 import glob
 import time
 import re
+import sys
 import urllib.parse
 import urllib.request
 
@@ -147,6 +148,9 @@ def restore_brinc_session(session_state, save_data):
             session_state['df_stations'] = stations_df
             session_state['stations_user_uploaded'] = True
 
+    session_state['boundary_kind'] = save_data.get('boundary_kind', 'place')
+    session_state['boundary_source_path'] = save_data.get('boundary_source_path', '')
+
     boundary_geojson = save_data.get('boundary_geojson')
     if boundary_geojson:
         try:
@@ -156,8 +160,26 @@ def restore_brinc_session(session_state, save_data):
         except Exception:
             pass
 
-    session_state['boundary_kind'] = save_data.get('boundary_kind', 'place')
-    session_state['boundary_source_path'] = save_data.get('boundary_source_path', '')
+    if session_state.get('master_gdf_override') is None and calls_data:
+        try:
+            app_mod = sys.modules.get('__main__')
+            resolver = getattr(app_mod, '_select_best_boundary_for_calls', None) if app_mod is not None else None
+            if resolver is None:
+                import app as app_mod  # Local import to avoid tightening the module dependency graph.
+                resolver = getattr(app_mod, '_select_best_boundary_for_calls', None)
+
+            if resolver is not None:
+                boundary_success, boundary_gdf, boundary_kind, _ = resolver(
+                    calls_df,
+                    session_state.get('active_city', ''),
+                    session_state.get('active_state', ''),
+                    prefer_county=bool(session_state.get('use_county_boundary', False)),
+                )
+                if boundary_success and boundary_gdf is not None and not boundary_gdf.empty:
+                    session_state['master_gdf_override'] = boundary_gdf
+                    session_state['boundary_kind'] = boundary_kind
+        except Exception:
+            pass
     session_state['boundary_overlay_gdf'] = None
     session_state['boundary_overlay_name'] = ''
     session_state['boundary_overlay_file'] = ''
