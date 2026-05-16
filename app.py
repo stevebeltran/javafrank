@@ -187,6 +187,7 @@ build_census_staging = _census_batch_mod.build_census_staging
 make_census_batch_chunks = _census_batch_mod.make_census_batch_chunks
 make_census_batch_zip = _census_batch_mod.make_census_batch_zip
 make_sample_census_batch = _census_batch_mod.make_sample_census_batch
+build_intersection_fallback_rows = _census_batch_mod.build_intersection_fallback_rows
 parse_census_result_files = _census_batch_mod.parse_census_result_files
 merge_census_results = _census_batch_mod.merge_census_results
 submit_census_batch_chunk = _census_batch_mod.submit_census_batch_chunk
@@ -2135,6 +2136,62 @@ def forward_geocode(address_str):
     if _matches:
         return float(_matches[0]['lat']), float(_matches[0]['lon'])
     return None, None
+
+
+def geocode_intersection_fallback_rows(intersection_df: pd.DataFrame, *, max_workers: int = 8, log_fn=None) -> pd.DataFrame:
+    """Geocode intersection rows with the existing forward geocoder.
+
+    The returned frame keeps source_id alignment so it can be merged back into
+    the Census result dataframe alongside normal street-address matches.
+    """
+    if intersection_df is None or intersection_df.empty:
+        return pd.DataFrame(columns=['source_id', 'input_address', 'match_status', 'match_type', 'matched_address', 'lonlat', 'tiger_id', 'side', 'lat', 'lon'])
+
+    work = intersection_df.copy().reset_index(drop=True)
+    if 'intersection_query' not in work.columns:
+        work['intersection_query'] = work.apply(
+            lambda row: ', '.join(
+                [v for v in [row.get('street', ''), row.get('city', ''), row.get('state', ''), row.get('zip', '')] if str(v or '').strip()]
+            ),
+            axis=1,
+        )
+
+    work['intersection_query'] = work['intersection_query'].fillna('').astype(str).str.strip()
+    unique_queries = [q for q in dict.fromkeys(work['intersection_query'].tolist()) if q]
+    if not unique_queries:
+        return pd.DataFrame(columns=['source_id', 'input_address', 'match_status', 'match_type', 'matched_address', 'lonlat', 'tiger_id', 'side', 'lat', 'lon'])
+
+    worker_count = max(1, min(int(max_workers or 1), len(unique_queries)))
+    results = {}
+    if log_fn is not None:
+        log_fn(f"Geocoding {len(unique_queries):,} unique intersection query string(s) with {worker_count} worker(s).")
+
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        future_map = {executor.submit(forward_geocode, query): query for query in unique_queries}
+        for future in cf.as_completed(future_map):
+            query = future_map[future]
+            try:
+                lat, lon = future.result()
+            except Exception:
+                lat, lon = None, None
+            results[query] = (lat, lon)
+
+    work['lat'] = work['intersection_query'].map(lambda q: results.get(q, (None, None))[0])
+    work['lon'] = work['intersection_query'].map(lambda q: results.get(q, (None, None))[1])
+    work = work.dropna(subset=['lat', 'lon']).copy()
+    if work.empty:
+        return pd.DataFrame(columns=['source_id', 'input_address', 'match_status', 'match_type', 'matched_address', 'lonlat', 'tiger_id', 'side', 'lat', 'lon'])
+
+    work['input_address'] = work['intersection_query']
+    work['match_status'] = 'intersection_fallback'
+    work['match_type'] = 'intersection'
+    work['matched_address'] = work['intersection_query']
+    work['lonlat'] = work.apply(lambda row: f"{float(row['lon']):.6f},{float(row['lat']):.6f}", axis=1)
+    work['tiger_id'] = ''
+    work['side'] = ''
+    work['geocode_source'] = 'forward_geocode_intersection'
+    work['geocode_provider'] = 'mixed'
+    return work
 
 @st.cache_data(show_spinner=False)
 def lookup_zip_code(zip_code: str):
@@ -5283,6 +5340,33 @@ def main():
                                     logs=_upload_logs,
                                 )
                                 census_stage_df, census_original_df, census_summary = build_census_staging(call_files)
+                                census_intersection_df = build_intersection_fallback_rows(census_stage_df)
+                                st.session_state['census_intersection_df'] = census_intersection_df
+                                intersection_result_df = pd.DataFrame()
+                                if census_intersection_df is not None and not census_intersection_df.empty:
+                                    _push_upload_log(
+                                        f"Preparing fallback geocoding for {len(census_intersection_df):,} intersection row(s)."
+                                    )
+                                    _set_upload_overlay_status(
+                                        title="CENSUS REQUIRED",
+                                        status="GEOCODING INTERSECTIONS",
+                                        copy="Geocoding intersection rows separately so they can merge back beside the Census results.",
+                                        progress=36,
+                                        logs=_upload_logs,
+                                    )
+                                    intersection_result_df = geocode_intersection_fallback_rows(
+                                        census_intersection_df,
+                                        max_workers=8,
+                                        log_fn=_push_upload_log,
+                                    )
+                                    st.session_state['census_intersection_result_df'] = intersection_result_df
+                                    census_summary['intersection_geocoded_rows'] = int(len(intersection_result_df))
+                                    _push_upload_log(
+                                        f"Intersection fallback geocoding returned {len(intersection_result_df):,} usable row(s)."
+                                    )
+                                else:
+                                    st.session_state['census_intersection_result_df'] = pd.DataFrame()
+                                    census_summary['intersection_geocoded_rows'] = 0
                                 if (
                                     df_c_partial is None or
                                     df_c_partial.empty or
@@ -5324,9 +5408,15 @@ def main():
                                         _diag_bits.append(f"state={_file_diag['state_col']}")
                                     if _file_diag.get('zip_col'):
                                         _diag_bits.append(f"zip={_file_diag['zip_col']}")
+                                    if _file_diag.get('intersection_rows'):
+                                        _diag_bits.append(f"intersections={int(_file_diag['intersection_rows'])}")
                                     _push_upload_log(
                                         f"{_file_diag.get('file','file')}: {_file_diag.get('ready_rows',0):,}/{_file_diag.get('rows',0):,} rows ready"
                                         + (f" ({'; '.join(_diag_bits)})" if _diag_bits else "")
+                                    )
+                                if census_summary.get('intersection_rows'):
+                                    _push_upload_log(
+                                        f"Separated {int(census_summary.get('intersection_rows', 0) or 0):,} intersection row(s) into the alternate fallback frame."
                                     )
                                 _set_upload_overlay_status(
                                     title="CENSUS REQUIRED",
@@ -5543,6 +5633,13 @@ def main():
                                     census_result_parts.append(chunk_result_df)
 
                                 result_df = pd.concat(census_result_parts, ignore_index=True) if census_result_parts else pd.DataFrame()
+                                intersection_result_df = st.session_state.get('census_intersection_result_df')
+                                if intersection_result_df is not None and not intersection_result_df.empty:
+                                    result_df = pd.concat([result_df, intersection_result_df], ignore_index=True)
+                                    result_df = result_df.drop_duplicates(subset=['source_id'], keep='first')
+                                    _push_upload_log(
+                                        f"Added {len(intersection_result_df):,} intersection fallback result(s) to the merge set."
+                                    )
                                 result_df = result_df.drop_duplicates(subset=['source_id'], keep='first') if not result_df.empty else result_df
                                 _push_upload_log("All Census chunks returned. Merging coordinates back into the source calls file.")
                                 _set_upload_overlay_status(

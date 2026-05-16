@@ -100,7 +100,7 @@ def _count_points_within_boundary(df_calls, boundary_geom_4326):
         return 0
     try:
         _pts = gpd.GeoSeries([Point(row['lon'], row['lat']) for _, row in df_calls.iterrows()], crs='EPSG:4326')
-        _cnt = sum(_pts.within(boundary_geom_4326))
+        _cnt = sum(_pts.within(boundary_geom_4326, align=False))
         return int(_cnt)
     except Exception:
         return 0

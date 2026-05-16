@@ -88,11 +88,40 @@ def _normalize_jacksonville_cfs_report(raw_bytes, filename=""):
         if not loc:
             return '', fallback_city
         parts = [p.strip() for p in re.split(r'\s*,\s*', loc) if p and p.strip()]
+        def _clean_city_name(city_text: str) -> str:
+            city = _cell_text(city_text)
+            city = re.sub(r'\s+location\s*$', '', city, flags=re.I).strip()
+            return re.sub(r'\s+', ' ', city).title()
+
+        def _looks_like_street_piece(piece: str) -> bool:
+            piece_u = _cell_text(piece).upper()
+            if not piece_u:
+                return False
+            if re.search(r'\d', piece_u):
+                return True
+            if '/' in piece_u:
+                return True
+            return bool(re.search(
+                r'\b(?:ST|STREET|RD|ROAD|AVE|AVENUE|BLVD|BOULEVARD|DR|DRIVE|LN|LANE|HWY|HIGHWAY|PKWY|PARKWAY|CIR|CIRCLE|CT|COURT|WAY|LOOP|TRAIL|TRL|PL|PLACE|TER|TERRACE|EXPY|EXPRESSWAY)\b',
+                piece_u,
+            ))
+
+        def _clean_street_name(street_text: str) -> str:
+            street = _cell_text(street_text)
+            if '|' in street:
+                pipe_parts = [p.strip() for p in street.split('|') if p and p.strip()]
+                if pipe_parts:
+                    street = next((p for p in reversed(pipe_parts) if _looks_like_street_piece(p)), pipe_parts[-1])
+            street = re.sub(r',\s*[^,]+(?:\s+LOCATION)?\s*$', '', street, flags=re.I).strip()
+            street = re.sub(r'\s+location\s*$', '', street, flags=re.I).strip()
+            return re.sub(r'\s+', ' ', street)
+
         if len(parts) >= 2:
             tail = parts[-1].strip()
             if tail and not re.search(r'\d', tail) and len(tail) <= 40 and not re.search(r'\b(?:AL|AK|AZ|AR|CA|CO|CT|DC|DE|FL|GA|HI|IA|ID|IL|IN|KS|KY|LA|MA|MD|ME|MI|MN|MO|MS|MT|NC|ND|NE|NH|NJ|NM|NV|NY|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VA|VT|WA|WI|WV|WY)\b', tail, re.I):
-                return ', '.join(parts[:-1]).strip(), tail.title()
-        return loc, fallback_city
+                return _clean_street_name(', '.join(parts[:-1]).strip()), _clean_city_name(tail)
+
+        return _clean_street_name(loc), _clean_city_name(fallback_city)
 
     def _priority_value(text: str):
         text_u = _cell_text(text).upper()
