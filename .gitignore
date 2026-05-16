@@ -7,3 +7,8 @@ regulatory_layers/*.parquet
 DOF_Public.csv
 DOF_Public.zip
 *.tmp
+porty/
+aws/
+udp-validator/
+Frankenstein/
+beta-optimizer/
