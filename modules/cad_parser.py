@@ -245,15 +245,16 @@ def _normalize_jacksonville_cfs_report(raw_bytes, filename=""):
                 continue
 
             if location_value:
-                combined_location = _cell_text(current.get('location', ''))
-                combined_location = f"{combined_location} {location_value}".strip() if combined_location else location_value
-                current['location'] = combined_location
-                street, city = _split_location(combined_location, current.get('city') or header_city)
-                if street:
-                    current['street'] = street
-                if city:
-                    current['city'] = city
-                    current['_csv_city'] = city
+                # For Jacksonville format, only use the primary location (first row).
+                # Continuation rows typically contain caller names, not address info.
+                if not current.get('street'):  # Only set if we haven't parsed a street yet
+                    street, city = _split_location(location_value, current.get('city') or header_city)
+                    if street:
+                        current['location'] = location_value
+                        current['street'] = street
+                    if city:
+                        current['city'] = city
+                        current['_csv_city'] = city
 
             if detail_value:
                 call_type, priority_text, disposition = _parse_call_detail(detail_value)
