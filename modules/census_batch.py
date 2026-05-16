@@ -305,7 +305,12 @@ def load_raw_call_table(uploaded_file) -> pd.DataFrame:
                 best_df = _normalize_headerless_excel_frame(best_df)
             return best_df.reset_index(drop=True)
 
-    content = uploaded_file.getvalue().decode('utf-8', errors='ignore')
+    raw_bytes = uploaded_file.getvalue()
+    _jacksonville_df = _normalize_jacksonville_cfs_report(raw_bytes, filename=uploaded_file.name)
+    if _jacksonville_df is not None and not _jacksonville_df.empty:
+        return _jacksonville_df.reset_index(drop=True)
+
+    content = raw_bytes.decode('utf-8', errors='ignore')
     delim = _guess_delimiter(content)
     raw_df = pd.read_csv(io.StringIO(content), sep=delim, dtype=str)
     raw_df.columns = [str(c).lower().strip() for c in raw_df.columns]

@@ -1317,7 +1317,7 @@ def aggressive_parse_calls(uploaded_files, require_valid_coordinates=True):
                         all_calls_list.append(res.reset_index(drop=True))
                         continue
 
-            if '_special_layout' in raw_df.columns and raw_df['_special_layout'].astype(str).eq('jacksonville_cfs').any():
+            if '_special_layout' in raw_df.columns and raw_df['_special_layout'].astype(str).isin({'jacksonville_cfs', 'jacksonville_cfs_report'}).any():
                 res = raw_df.copy().reset_index(drop=True)
                 if '_special_layout' in res.columns:
                     res = res.drop(columns=['_special_layout'], errors='ignore')
