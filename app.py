@@ -125,7 +125,7 @@ from modules.utilities import (
 )
 from modules.admin_dashboard import (
     _is_admin_dashboard_user, _apply_admin_fast_jump,
-    _render_live_admin_dashboard,
+    _render_live_admin_dashboard, _live_admin_dashboard_fragment,
 )
 
 try:
@@ -1322,7 +1322,17 @@ def _render_in_app_faq():
     )
 
 
+def _presence_heartbeat_fragment():
+    """Track user presence for session management."""
+    pass
+
+
+# Changelog entries for FAQ
+FAQ_CHANGELOG = []
+
+
 def main():
+    init_session_state(st.session_state, _slugify, _build_public_report_url)
     _presence_heartbeat_fragment()
     if not st.session_state['csvs_ready']:
         # GRAB THE LOGO FOR THE UPLOAD PAGE
