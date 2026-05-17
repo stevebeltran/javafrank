@@ -5,7 +5,13 @@ import os
 import re
 import streamlit as st
 import textwrap
+import threading
 import time
+
+# Module-level session tracking
+_ACTIVE_SESSION_LOCK = threading.RLock()
+_ACTIVE_SESSION_REGISTRY = {}
+_ACTIVE_SESSION_TTL_SECONDS = 150
 
 # Import required helper
 def _get_query_params_dict():
