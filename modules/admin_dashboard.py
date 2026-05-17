@@ -1,5 +1,6 @@
 """Admin dashboard and session management functions."""
 import os
+import re
 import streamlit as st
 import time
 
