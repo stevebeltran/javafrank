@@ -128,8 +128,6 @@ from modules.admin_dashboard import (
     _is_admin_dashboard_user, _apply_admin_fast_jump,
     _render_live_admin_dashboard, _live_admin_dashboard_fragment,
 )
-from modules.views_path_01 import render as render_path_01
-from modules.views_path_02 import render as render_path_02
 from modules.cad_parser import aggressive_parse_calls
 from modules.census_batch import (
     build_census_staging, build_intersection_fallback_rows,
