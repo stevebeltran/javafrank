@@ -285,16 +285,11 @@ def render(submit_demo, _is_boundary_sidecar, _looks_like_stations, _load_upload
             st.session_state['_pop_resolved'] = all_populations_verified
 
             prog.progress(55, text="🚔 Modeling 911 calls — every one represents someone who needed help…")
-            _preview_cap = 10000 if (
-                int(round(total_estimated_pop * 0.6)) > 10000
-                or any(str(record.get('boundary_kind', '')).strip().lower() == 'county' for record in (boundary_records or []))
-            ) else None
             df_demo, annual_cfs, simulated_points_count = build_demo_calls(
                 city_poly,
                 total_estimated_pop,
                 generate_clustered_calls,
                 boundary_records=boundary_records,
-                max_preview_points=_preview_cap,
             )
 
         if is_fast_demo_path:

@@ -1100,6 +1100,44 @@ def _allocate_demo_counts(weights, total_count):
     return counts
 
 
+def _estimate_demo_preview_points(total_estimated_pop, boundary_records=None, max_preview_points=None):
+    """Return a lightweight preview size for simulated call dots.
+
+    The annual call estimate still follows the 60% rule, but the rendered dot
+    cloud only needs to be dense enough to read as a city-level pattern. This
+    keeps large metros like Chicago visually credible without materializing the
+    full annual call volume.
+    """
+    try:
+        pop = max(int(round(float(total_estimated_pop or 0))), 0)
+    except Exception:
+        pop = 0
+
+    if max_preview_points is not None:
+        try:
+            return max(0, int(max_preview_points))
+        except Exception:
+            pass
+
+    if pop <= 25_000:
+        return 250
+    if pop <= 50_000:
+        return 400
+    if pop <= 100_000:
+        return 600
+    if pop <= 250_000:
+        return 1_000
+    if pop <= 500_000:
+        return 1_800
+    if pop <= 1_000_000:
+        return 3_000
+    if pop <= 2_500_000:
+        return 5_000
+    if pop <= 5_000_000:
+        return 7_000
+    return 10_000
+
+
 def build_demo_calls(city_poly, total_estimated_pop, generate_clustered_calls, boundary_records=None, max_preview_points=None):
     annual_cfs = int(total_estimated_pop * 0.6)
     if boundary_records:
@@ -1108,15 +1146,14 @@ def build_demo_calls(city_poly, total_estimated_pop, generate_clustered_calls, b
         if weighted_annual_cfs > 0:
             annual_cfs = weighted_annual_cfs
     simulated_points_count = max(int(round(annual_cfs)), 0)
-    preview_cap = None
-    if max_preview_points is not None:
-        try:
-            preview_cap = max(0, int(max_preview_points))
-        except Exception:
-            preview_cap = None
+    preview_cap = _estimate_demo_preview_points(
+        total_estimated_pop,
+        boundary_records=boundary_records,
+        max_preview_points=max_preview_points,
+    )
     if preview_cap:
-        # Keep the live preview responsive for county-scale inputs while
-        # preserving the annual call estimate in annual_cfs.
+        # Keep the live preview responsive while preserving the annual call
+        # estimate in annual_cfs.
         simulated_points_count = min(simulated_points_count, preview_cap)
     np.random.seed(42)
     random.seed(42)

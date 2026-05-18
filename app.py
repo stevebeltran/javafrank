@@ -2795,21 +2795,6 @@ def generate_clustered_calls(polygon, num_points):
     return points
 
 
-def _compute_demo_preview_cap(total_estimated_pop, boundary_records=None, cap=10000):
-    try:
-        if int(round(float(total_estimated_pop or 0) * 0.6)) > int(cap):
-            return int(cap)
-    except Exception:
-        return int(cap)
-    if boundary_records:
-        try:
-            if any(str(record.get('boundary_kind', '')).strip().lower() == 'county' for record in boundary_records):
-                return int(cap)
-        except Exception:
-            return int(cap)
-    return None
-
-
 @st.cache_data(show_spinner=False)
 def load_fast_demo_payload(city_name, state_name, station_count=FAST_DEMO_STATION_COUNT, cache_version=FAST_DEMO_CACHE_VERSION):
     """Build and cache the smallest useful payload for Path 03."""
@@ -2857,13 +2842,11 @@ def load_fast_demo_payload(city_name, state_name, station_count=FAST_DEMO_STATIO
     master_gdf_override = master_gdf_override[["DISPLAY_NAME", "data_count", "geometry"]].copy()
 
     total_estimated_pop = population
-    _preview_cap = _compute_demo_preview_cap(total_estimated_pop, boundary_records=boundary_records)
     df_demo, annual_cfs, simulated_points_count = build_demo_calls(
         city_poly,
         total_estimated_pop,
         generate_clustered_calls,
         boundary_records=boundary_records,
-        max_preview_points=_preview_cap,
     )
 
     station_target = max(1, min(int(station_count or FAST_DEMO_STATION_COUNT), FAST_DEMO_STATION_COUNT))
@@ -6437,13 +6420,11 @@ body{{background:transparent;overflow:hidden}}
                     simulated_points_count = fast_payload['simulated_points_count']
                 else:
                     prog.progress(55, text="🚔 Modeling 911 calls — every one represents someone who needed help…")
-                    _preview_cap = _compute_demo_preview_cap(total_estimated_pop, boundary_records=boundary_records)
                     df_demo, annual_cfs, simulated_points_count = build_demo_calls(
                         city_poly,
                         total_estimated_pop,
                         generate_clustered_calls,
                         boundary_records=boundary_records,
-                        max_preview_points=_preview_cap,
                     )
             st.session_state['total_original_calls'] = annual_cfs
             st.session_state['df_calls'] = df_demo

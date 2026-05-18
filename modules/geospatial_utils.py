@@ -201,7 +201,6 @@ def load_fast_demo_payload(city_name, state_name, station_count=FAST_DEMO_STATIO
         total_estimated_pop,
         generate_clustered_calls,
         boundary_records=boundary_records,
-        max_preview_points=10000,
     )
 
     station_target = max(1, min(int(station_count or FAST_DEMO_STATION_COUNT), FAST_DEMO_STATION_COUNT))
