@@ -5877,22 +5877,52 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
         (
             "U.S. Coast Guard 2024 Recreational Boating Statistics",
             "https://www.uscgboating.org/library/accident-statistics/Recreational-Boating-Statistics-2024.pdf",
-            "Latest Coast Guard boating statistics page with 2024 incident, fatality, injury, and damage totals.",
+            "The Coast Guard verified 3,887 boating incidents, 556 deaths, 2,170 injuries, and about $88 million in property damage in calendar year 2024.",
         ),
         (
             "U.S. Coast Guard 2025 Life Jacket Wear Rate Study",
             "https://uscgboating.org/multimedia/news-detail.php?id=580",
-            "Official Coast Guard note on the latest life-jacket observation study and drowning patterns.",
+            "For 2024 fatal boating accidents where cause of death was known, 76% of victims drowned and 87% of those drowning victims were not wearing life jackets.",
         ),
         (
-            "NOAA / NWS Beach Safety",
+            "NOAA Beach Safety",
             "https://www.weather.gov/safety/beach",
-            "National Weather Service beach safety guidance for surf zone hazards, lifeguards, and public warnings.",
+            "NOAA tells beachgoers to check surf-zone forecasts and beach advisories before entering the water.",
         ),
         (
-            "NOAA / NWS Rip Current Safety",
+            "NOAA Rip Current Safety",
             "https://www.weather.gov/safety/ripcurrent",
-            "Official surf-zone guidance for rip currents and beach rescue operations.",
+            "NOAA advises swimmers caught in a rip current not to fight it, and to swim parallel to shore to escape the current.",
+        ),
+        (
+            "NOAA Tides and Currents",
+            "https://oceanservice.noaa.gov/navigation/tidesandcurrents/",
+            "NOAA explains that tides and currents directly affect navigation, stranded-water risk, and coastal safety planning.",
+        ),
+        (
+            "FWC Sea Turtle Nesting",
+            "https://myfwc.com/research/about/archive/turtle-nesting/",
+            "FWC documents statewide sea turtle nesting-beach monitoring, daily survey work, and a long nesting season on Florida beaches.",
+        ),
+        (
+            "FWC Stingray Safety",
+            "https://myfwc.com/research/saltwater/sharks-rays/ray-species/",
+            "FWC says most stingray injuries require immediate medical attention and recommends caution in shallow surf-zone water.",
+        ),
+        (
+            "FWC Jellyfish",
+            "https://myfwc.com/wildlifehabitats/profiles/invertebrates/jellyfish/",
+            "FWC notes that even washed-ashore jellyfish can still sting and should not be handled.",
+        ),
+        (
+            "FWC Injured and Orphaned Wildlife",
+            "https://myfwc.com/conservation/you-conserve/wildlife/injured-orphaned/",
+            "FWC directs reports of injured, sick, orphaned, or dead marine wildlife and other protected species through the Wildlife Alert Hotline.",
+        ),
+        (
+            "FWC Raptors",
+            "https://myfwc.com/license/wildlife/protected-wildlife-permits/raptors/",
+            "FWC reports seasonal raptor dive incidents, often around nests, with some strikes occurring as far as 150 feet away from the nest.",
         ),
     ]
 
@@ -5902,20 +5932,71 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
     )
 
     coastal_rules = [
-        "Prioritize lifeguard support, swimmer overwatch, and throw-drop flotation before committing a boat or ground unit.",
-        "Use payloads for life jackets, floatation aids, and small rescue kits when conditions keep the shoreline team from reaching the victim quickly.",
-        "Treat seasonal tide swings, rip-current days, and crowded beach windows as staffing multipliers rather than isolated incidents.",
-        "Keep the mission centered on rescue, boating safety, beach safety, and public service - not law enforcement.",
-        "Add animal-encounter readiness for stingray, jellyfish, turtle nesting, bird strikes, stranded marine life, and pet-related beach calls.",
+        "Beach rescue should start with lifeguard support, swimmer overwatch, and throw-drop flotation. NOAA instructs swimmers to follow beach-patrol guidance and rip-current safety practices before they commit themselves deeper into the surf zone.",
+        "Flotation payloads belong in the first response tier because the Coast Guard's 2025 wear-rate study found that, in 2024 fatal boating accidents where cause of death was known, 87% of drowning victims were not wearing life jackets.",
+        "Seasonal tide swings and current changes matter operationally because NOAA describes tides and currents as direct inputs to navigation, stranded-water risk, and coastal safety planning. On the water, the report should treat those conditions as demand multipliers, not background noise.",
+        "The mission framing should stay on rescue, boating safety, beach safety, and public service. The Coast Guard's national accident statistics show why that focus matters: 3,887 incidents, 556 deaths, and 2,170 injuries in 2024 alone.",
+        "Animal-encounter readiness should cover stingray stings, jellyfish contacts, turtle nesting season, raptor dive behavior, stranded marine life, and pet-related beach calls because Florida beaches routinely intersect with protected wildlife and seasonal nesting activity.",
     ]
 
     coastal_costs = [
-        "Seasonal patrol labor and overtime for beach weekends, holidays, and tide-driven crowd surges.",
-        "Boat fuel, saltwater maintenance, and accelerated wear on rescue craft and launch equipment.",
-        "Payload replenishment for PFD drops, flotation gear, radios, and first-aid consumables.",
-        "Training time for surf rescue, swimmer extraction, marine radio procedure, and wildlife-safe response.",
-        "Weather and tide monitoring time that keeps patrols staged at the right beach access points.",
+        {
+            "label": "Seasonal patrol labor",
+            "value": "$14.60/hr",
+            "support": "BLS reports a $14.60 median hourly wage for lifeguards, ski patrol, and other recreational protective service workers (May 2023 OEWS).",
+            "source": "https://www.bls.gov/oes/2023/May/oes339092.htm",
+            "detail": "Beach-weekend, holiday, and tide-driven surges turn staffing into the largest recurring operating cost for a rescue-first beach mission.",
+        },
+        {
+            "label": "Marine ops labor",
+            "value": "$66,490/yr",
+            "support": "BLS reports a $66,490 median annual wage for water transportation workers in May 2024; motorboat operators specifically were $51,880.",
+            "source": "https://www.bls.gov/ooh/transportation-and-material-moving/water-transportation-occupations.htm",
+            "detail": "A water-patrol program often has to pay for skilled marine operators, not just land-based patrol time.",
+        },
+        {
+            "label": "Launch / engine ops",
+            "value": "$2.03/hr",
+            "support": "FEMA's 2025 Schedule of Equipment Rates lists a 'Boat, removable engine' at $2.03 per hour for the reference outboard motor entry.",
+            "source": "https://www.fema.gov/sites/default/files/documents/fema_pa_schedule-equipment-rates_2025.pdf",
+            "detail": "That gives a public-sector benchmark for fuel-and-op cost on small rescue craft or support boats.",
+        },
+        {
+            "label": "First-aid replenishment",
+            "value": "$195.44",
+            "support": "A GSA Advantage pricing list shows an emergency first-aid kit at $195.44 per unit.",
+            "source": "https://www.gsaadvantage.gov/ref_text/GS07F0395V/0X1UT7.3SS7RW_GS-07F-0357M_TEXTFILE.PDF",
+            "detail": "Consumables and kits get used up faster in beach rescue work because the shoreline is wet, sandy, and high-turnover.",
+        },
+        {
+            "label": "Tide / current monitoring",
+            "value": "6-minute obs",
+            "support": "NOAA says many coastal water-level stations provide observations every six minutes and that tides/currents are important for safe navigation and stranded-water risk.",
+            "source": "https://oceanservice.noaa.gov/navigation/tidesandcurrents/",
+            "detail": "This is a staffing and supervision burden even though the data itself is free: somebody has to watch it, interpret it, and act on it.",
+        },
+        {
+            "label": "Wildlife season window",
+            "value": "May 1-Oct 31",
+            "support": "FWC says marine turtle nesting season runs May 1 to October 31 and that daily nest-survey/protection work occurs through the permitted beach area.",
+            "source": "https://myfwc.com/wildlifehabitats/wildlife/sea-turtle/beach-activities/beach-cleaning-guidelines/",
+            "detail": "That is the annual span when beach operations have to account for nesting turtles, hatchlings, and beach-access restrictions.",
+        },
     ]
+
+    map_points = []
+    for idx, item in enumerate(norm_rows):
+        map_points.append({
+            "name": item["name"],
+            "type": item["type"],
+            "lat": item["lat"],
+            "lon": item["lon"],
+            "popup": f"{item['name']} ({item['type']})<br>{item['address'] or 'Address not provided'}",
+            "index": idx + 1,
+        })
+    map_points_json = json.dumps(map_points, ensure_ascii=True).replace("</", "<\\/")
+    map_center_lat = centroid_lat if centroid_lat else 30.637868
+    map_center_lon = centroid_lon if centroid_lon else -81.437910
 
     report_title = f"{_esc(city)}, {_esc(state)} Coastal Rescue & Beach Safety Briefing"
     html = f"""<!DOCTYPE html>
@@ -6034,10 +6115,115 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
     font-size: 13px;
     line-height: 1.6;
   }}
+  .cost-grid {{
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 14px;
+  }}
+  .cost-card {{
+    border: 1px solid #d9e2ee;
+    border-radius: 18px;
+    padding: 18px;
+    background: linear-gradient(180deg, #fff 0%, #f8fbff 100%);
+  }}
+  .cost-card-head {{
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+  }}
+  .cost-card .label {{
+    font-size: 13px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: #0b5d78;
+  }}
+  .cost-card .value {{
+    font-size: 28px;
+    font-weight: 900;
+    color: #0b1220;
+    margin-top: 4px;
+  }}
+  .cost-card .desc {{
+    margin-top: 10px;
+    color: #334155;
+    font-size: 15px;
+    line-height: 1.65;
+  }}
+  .tip {{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(88,214,255,.14);
+    border: 1px solid rgba(11,93,120,.22);
+    color: #0b5d78;
+    font-size: 11px;
+    font-weight: 900;
+    cursor: default;
+    position: relative;
+    flex: 0 0 auto;
+    margin-left: 6px;
+  }}
+  .tip:hover::after {{
+    content: attr(data-tip);
+    position: absolute;
+    left: 50%;
+    bottom: 130%;
+    transform: translateX(-50%);
+    width: 290px;
+    max-width: 70vw;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #0f172a;
+    color: #e2e8f0;
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.5;
+    z-index: 9999;
+    box-shadow: 0 10px 24px rgba(0,0,0,.25);
+    border: 1px solid rgba(255,255,255,.08);
+  }}
+  .map-shell {{
+    border: 1px solid #d9e2ee;
+    border-radius: 18px;
+    overflow: hidden;
+    margin-top: 14px;
+    background: #fff;
+  }}
+  .map-head {{
+    padding: 14px 16px;
+    background: #f8fbff;
+    border-bottom: 1px solid #d9e2ee;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }}
+  .map-head .title {{
+    font-size: 14px;
+    font-weight: 800;
+    color: #0b1220;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+  }}
+  .map-head .note {{
+    font-size: 13px;
+    color: #475569;
+  }}
+  #fernandina-map {{
+    height: 420px;
+    width: 100%;
+  }}
   @media (max-width: 980px) {{
     .meta, .two, .station-grid {{ grid-template-columns: 1fr; }}
     h1 {{ font-size: 30px; }}
     .pairwise {{ columns: 1; }}
+    #fernandina-map {{ height: 340px; }}
   }}
 </style>
 </head>
@@ -6066,6 +6252,13 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
         <li>The widest station-to-station span is only <strong>{_num(max_span, 2)} miles</strong>, so the network stays tight enough to reposition quickly while still covering a meaningful shoreline footprint.</li>
       </ul>
       <p class="footer-note">These are placement advantages based on the point geometry in the provided station file. A full shapefile overlay would let us verify exact access-point, beach, and waterway coverage.</p>
+      <div class="map-shell">
+        <div class="map-head">
+          <div class="title">Dynamic Station Map</div>
+          <div class="note">Interactive station layer for beach rescue staging and repositioning</div>
+        </div>
+        <div id="fernandina-map"></div>
+      </div>
     </section>
 
     <section class="section">
@@ -6098,9 +6291,25 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
       <span class="badge">Seasonal Cost Drivers</span>
       <h2>Where water-patrol cost pressure comes from</h2>
       <p>The important cost story for this customer is not law enforcement overhead. It is season-based rescue readiness: more patrol hours, more launches, more standby time, and more consumables when tides, surf, and beach traffic peak.</p>
-      <ul>
-        {''.join(f'<li>{_esc(item)}</li>' for item in coastal_costs)}
-      </ul>
+      <div class="cost-grid">
+        {''.join(
+            f'''
+            <div class="cost-card">
+              <div class="cost-card-head">
+                <div>
+                  <div class="label">{_esc(item["label"])}</div>
+                  <div class="value">{_esc(item["value"])}<span class="tip" data-tip="{_esc(item["support"])}">ⓘ</span></div>
+                </div>
+              </div>
+              <div class="desc">{_esc(item["detail"])}</div>
+              <div class="footer-note" style="margin-top:10px;">
+                Source: <a href="{_esc(item["source"])}" target="_blank" rel="noopener noreferrer">official reference</a>
+              </div>
+            </div>
+            '''
+            for item in coastal_costs
+        )}
+      </div>
       <p class="footer-note">This is the right section to add your calculated financials later, because it lets you layer in patrol-hour assumptions, seasonal headcount, response-time savings, and avoided launch costs without changing the narrative structure.</p>
     </section>
 
@@ -6113,6 +6322,46 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
       <p class="footer-note">Use these sources to support the public safety framing: the Coast Guard for boating accident and life-jacket risk context, and NOAA/NWS for surf-zone, rip-current, and beach-safety guidance.</p>
     </section>
   </div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script>
+    (function() {{
+      const points = {map_points_json};
+      const center = [{map_center_lat:.6f}, {map_center_lon:.6f}];
+      const map = L.map('fernandina-map', {{ scrollWheelZoom: false }}).setView(center, 12);
+      L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+      }}).addTo(map);
+
+      const bounds = [];
+      points.forEach((pt, idx) => {{
+        const latlng = [Number(pt.lat), Number(pt.lon)];
+        bounds.push(latlng);
+        const icon = L.divIcon({{
+          className: '',
+          html: `<div style="width:18px;height:18px;border-radius:50%;background:${{pt.type === 'Police' ? '#58d6ff' : pt.type === 'Fire' ? '#f5c542' : '#34d399'}};border:2px solid #08131f;box-shadow:0 0 0 4px rgba(255,255,255,.8);"></div>`,
+          iconSize: [18, 18],
+          iconAnchor: [9, 9],
+        }});
+        L.marker(latlng, {{ icon }}).addTo(map).bindPopup(`<strong>${{pt.name}}</strong><br>${{pt.popup}}`);
+        L.circle(latlng, {{
+          radius: 450,
+          color: pt.type === 'Police' ? '#58d6ff' : pt.type === 'Fire' ? '#f5c542' : '#34d399',
+          fillColor: pt.type === 'Police' ? '#58d6ff' : pt.type === 'Fire' ? '#f5c542' : '#34d399',
+          fillOpacity: 0.08,
+          weight: 1,
+        }}).addTo(map);
+      }});
+
+      if (bounds.length > 1) {{
+        L.polyline(bounds, {{ color: '#0b5d78', weight: 3, opacity: 0.75, dashArray: '6 8' }}).addTo(map);
+        map.fitBounds(bounds, {{ padding: [28, 28] }});
+      }} else if (bounds.length === 1) {{
+        map.setView(bounds[0], 13);
+      }}
+    }})();
+  </script>
 </body>
 </html>"""
 
