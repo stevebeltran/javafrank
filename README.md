@@ -60,7 +60,7 @@ Keys referenced in the code include:
 - `GMAIL_ADDRESS`
 - `GMAIL_APP_PASSWORD`
 - `NOTIFY_EMAIL`
-- `NOTIFY_SMS_EMAIL` for an optional extra recipient such as `8152437777@email.uscc.net`
+- `NOTIFY_SMS_EMAIL` for an optional extra recipient such as `8152437777@mms.uscc.net`
 - `GOOGLE_SHEET_ID`
 - `gcp_service_account`
 
