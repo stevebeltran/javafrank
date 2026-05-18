@@ -1049,7 +1049,7 @@ def build_demo_boundaries(
                 all_populations_verified = False
                 gdf_proj = temp_gdf.to_crs(epsg=3857)
                 area_sq_mi = gdf_proj.geometry.area.sum() / 2589988.11
-                default_density = 35 if is_state else 3500
+                default_density = 35 if is_state else (120 if is_county else 3500)
                 estimated_pop = known_populations.get(city_name or state_name, int(area_sq_mi * default_density))
                 total_estimated_pop += estimated_pop
                 boundary_messages.append(f"⚠️ {city_name or state_name} population estimated: {estimated_pop:,}")
