@@ -5761,6 +5761,7 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
     """Generate a Fernandina Beach-only coastal rescue and beach safety briefing."""
 
     import html as _html
+    import plotly.graph_objects as go
 
     def _esc(value):
         return _html.escape("" if value is None else str(value), quote=True)
@@ -5863,7 +5864,7 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
               <div class="station-meta">{_esc(item["type"])}{f' · {_esc(item["capacity"])} capacity' if item["capacity"] not in (None, "") else ""}</div>
               <div class="station-meta">{_esc(item["address"]) if item["address"] else "Address not provided"}</div>
               <div class="station-meta">Lat {_num(item["lat"], 6)} · Lon {_num(item["lon"], 6)}</div>
-              <div class="station-notes">{_esc(item["notes"]) if item["notes"] else "Designed for beach and waterfront public service coverage."}</div>
+              <div class="station-notes">{_esc(item["notes"]) if item["notes"] else "Built to support fast shoreline rescue, nearshore overwatch, and waterfront public-service response."}</div>
             </div>
             """
         )
@@ -5923,6 +5924,21 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
             "FWC Raptors",
             "https://myfwc.com/license/wildlife/protected-wildlife-permits/raptors/",
             "FWC reports seasonal raptor dive incidents, often around nests, with some strikes occurring as far as 150 feet away from the nest.",
+        ),
+        (
+            "BRINC Responder Drone",
+            "https://brincdrones.com/responder/",
+            "Responder is BRINC's purpose-made 911 response drone with 42 minutes of flight time, 44 mph top speed, 40x total zoom, 640px thermal, 4G teleoperations, and payload-drop support for lifesaving gear.",
+        ),
+        (
+            "BRINC Guardian Drone",
+            "https://brincdrones.com/guardian/",
+            "Guardian is BRINC's next-generation DFR platform with 62 minutes of flight time, 60 mph top speed, unlimited range with satellite connectivity, and a 10-lb payload capacity.",
+        ),
+        (
+            "BRINC LiveOps",
+            "https://brincdrones.com/liveops/",
+            "LiveOps provides live streaming, real-time maps, and multi-drone visibility on a single page for coordinated operations.",
         ),
     ]
 
@@ -5984,6 +6000,37 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
         },
     ]
 
+    drone_mix_rows = [
+        {
+            "title": "1 Responder",
+            "mission": "Fast single-launch beach overwatch and payload-drop option",
+            "value": "42 min / 44 mph",
+            "support": "Responder is BRINC's purpose-made 911 response drone. BRINC lists 42 minutes of flight time, 44 mph top speed, 40x total zoom, 640px thermal, and payload-drop support for lifesaving equipment.",
+            "source": "https://brincdrones.com/responder/",
+        },
+        {
+            "title": "1 Guardian",
+            "mission": "Longest-endurance single-aircraft option for broader shoreline coverage",
+            "value": "62 min / 60 mph",
+            "support": "Guardian is BRINC's next-generation DFR drone with 62 minutes of flight time, 60 mph top speed, unlimited range with satellite connectivity, and a 10-lb payload capacity.",
+            "source": "https://brincdrones.com/guardian/",
+        },
+        {
+            "title": "2 Units",
+            "mission": "One drone flying while the other is staged, charging, or covering a second access point",
+            "value": "Coverage + redundancy",
+            "support": "BRINC's LiveOps platform supports multi-drone live streaming on a single page, which is the operational foundation for keeping one drone airborne while another is staged or charging.",
+            "source": "https://brincdrones.com/liveops/",
+        },
+        {
+            "title": "3 Units",
+            "mission": "North, center, and south coverage with surge redundancy for busy beach days",
+            "value": "Best for 24/7 posture",
+            "support": "Guardian Station is designed for 24/7 DFR operations and automatic redeploy, while BRINC says LiveOps can stream an entire fleet on a single page. Three units support a true shift-based coastal operations model.",
+            "source": "https://brincdrones.com/guardian/",
+        },
+    ]
+
     map_points = []
     for idx, item in enumerate(norm_rows):
         map_points.append({
@@ -5991,12 +6038,75 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
             "type": item["type"],
             "lat": item["lat"],
             "lon": item["lon"],
+            "address": item["address"],
             "popup": f"{item['name']} ({item['type']})<br>{item['address'] or 'Address not provided'}",
             "index": idx + 1,
         })
-    map_points_json = json.dumps(map_points, ensure_ascii=True).replace("</", "<\\/")
     map_center_lat = centroid_lat if centroid_lat else 30.637868
     map_center_lon = centroid_lon if centroid_lon else -81.437910
+    map_zoom = 11 if max_span <= 2.0 else 10 if max_span <= 5.0 else 9
+    station_palette = ["#58d6ff", "#f5c542", "#34d399", "#fb7185", "#a78bfa"]
+    legend_bg = "rgba(15, 23, 42, 0.92)"
+    legend_text = "#e2e8f0"
+    accent_color = "#58d6ff"
+
+    map_fig = go.Figure()
+    if map_points:
+        for idx, item in enumerate(map_points):
+            color = station_palette[idx % len(station_palette)]
+            map_fig.add_trace(go.Scattermap(
+                lat=[item["lat"]],
+                lon=[item["lon"]],
+                mode="markers",
+                marker=dict(size=18, color=color),
+                name=f"{idx + 1}. {item['name']}",
+                hovertemplate=(
+                    f"<b>{_esc(item['name'])}</b><br>"
+                    f"{_esc(item['type'])}<br>"
+                    f"{_esc(item.get('address') or 'Address not provided')}<extra></extra>"
+                ),
+                showlegend=True,
+            ))
+
+        if len(map_points) > 1:
+            map_fig.add_trace(go.Scattermap(
+                lat=[item["lat"] for item in map_points],
+                lon=[item["lon"] for item in map_points],
+                mode="lines",
+                line=dict(color="rgba(245,197,66,.85)", width=3),
+                name="Coverage Link",
+                hoverinfo="skip",
+                showlegend=True,
+            ))
+
+    map_fig.update_layout(
+        map=dict(
+            center=dict(lat=map_center_lat, lon=map_center_lon),
+            zoom=map_zoom,
+            style="carto-darkmatter",
+        ),
+        margin=dict(l=0, r=0, t=0, b=0),
+        height=420,
+        showlegend=True,
+        legend=dict(
+            yanchor="top",
+            y=0.98,
+            xanchor="left",
+            x=0.02,
+            bgcolor=legend_bg,
+            bordercolor=accent_color,
+            borderwidth=1,
+            font=dict(size=12, color=legend_text),
+            itemclick="toggle",
+        ),
+    )
+    map_html = map_fig.to_html(
+        full_html=False,
+        include_plotlyjs="cdn",
+        default_height="420px",
+        default_width="100%",
+        config={"displayModeBar": False, "responsive": True},
+    )
 
     report_title = f"{_esc(city)}, {_esc(state)} Coastal Rescue & Beach Safety Briefing"
     html = f"""<!DOCTYPE html>
@@ -6121,6 +6231,49 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
     gap: 14px;
     margin-top: 14px;
   }}
+  .mix-grid {{
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 14px;
+  }}
+  .mix-card {{
+    border: 1px solid #d9e2ee;
+    border-radius: 18px;
+    padding: 18px;
+    background: linear-gradient(180deg, #fff 0%, #f8fbff 100%);
+  }}
+  .mix-card .top {{
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+  }}
+  .mix-card .title {{
+    font-size: 18px;
+    font-weight: 900;
+    color: #0b1220;
+  }}
+  .mix-card .mission {{
+    margin-top: 6px;
+    color: #0b5d78;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+  }}
+  .mix-card .value {{
+    font-size: 24px;
+    font-weight: 900;
+    color: #0b1220;
+    white-space: nowrap;
+  }}
+  .mix-card .desc {{
+    margin-top: 10px;
+    color: #334155;
+    font-size: 15px;
+    line-height: 1.65;
+  }}
   .cost-card {{
     border: 1px solid #d9e2ee;
     border-radius: 18px;
@@ -6215,15 +6368,10 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
     font-size: 13px;
     color: #475569;
   }}
-  #fernandina-map {{
-    height: 420px;
-    width: 100%;
-  }}
   @media (max-width: 980px) {{
     .meta, .two, .station-grid {{ grid-template-columns: 1fr; }}
     h1 {{ font-size: 30px; }}
     .pairwise {{ columns: 1; }}
-    #fernandina-map {{ height: 340px; }}
   }}
 </style>
 </head>
@@ -6251,13 +6399,13 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
         <li><strong>Atlantic Recreational Center</strong> adds southeast corridor reach, which helps cover beach access, recreation, and near-water public service calls on the far side of the island.</li>
         <li>The widest station-to-station span is only <strong>{_num(max_span, 2)} miles</strong>, so the network stays tight enough to reposition quickly while still covering a meaningful shoreline footprint.</li>
       </ul>
-      <p class="footer-note">These are placement advantages based on the point geometry in the provided station file. A full shapefile overlay would let us verify exact access-point, beach, and waterway coverage.</p>
+      <p class="footer-note">These placement advantages come straight from the station geometry you provided. A shoreline shapefile overlay can be added later if you want to verify exact beach access coverage, waterway reach, and launch-point control against parcel geometry.</p>
       <div class="map-shell">
         <div class="map-head">
-          <div class="title">Dynamic Station Map</div>
-          <div class="note">Interactive station layer for beach rescue staging and repositioning</div>
+          <div class="title">Rescue Coverage Map</div>
+          <div class="note">Interactive station layout for rescue staging, flotation drops, and rapid repositioning</div>
         </div>
-        <div id="fernandina-map"></div>
+        {map_html}
       </div>
     </section>
 
@@ -6273,15 +6421,15 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
           <ul class="pairwise">{pairwise_list}</ul>
         </div>
         <div>
-          <h3 style="margin:0 0 8px;font-size:20px;color:#0b1220;">Operational read</h3>
-          <p>For a beach community, this geometry is useful because it supports early lifeguard overwatch, fast swimmer verification, flotation drop missions, and short repositioning cycles during busy tide or weather windows. It is also a practical shape for marine rescue support because the command node can pivot resources north or south without needing a large fixed footprint.</p>
+          <h3 style="margin:0 0 8px;font-size:20px;color:#0b1220;">Customer value from the layout</h3>
+          <p>For Fernandina Beach, this geometry supports the exact use case the customer cares about: faster lifeguard overwatch, quicker swimmer verification, flotation drops before a boat launch, and short repositioning cycles when tides, surf, or tourist volume change through the day. It also gives the command team a compact north-south launch posture instead of a scattered footprint.</p>
         </div>
       </div>
     </section>
 
     <section class="section">
       <span class="badge">Beach Mission</span>
-      <h2>What the report should emphasize</h2>
+      <h2>Beach rescue priorities</h2>
       <ul>
         {''.join(f'<li>{_esc(item)}</li>' for item in coastal_rules)}
       </ul>
@@ -6289,8 +6437,8 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
 
     <section class="section">
       <span class="badge">Seasonal Cost Drivers</span>
-      <h2>Where water-patrol cost pressure comes from</h2>
-      <p>The important cost story for this customer is not law enforcement overhead. It is season-based rescue readiness: more patrol hours, more launches, more standby time, and more consumables when tides, surf, and beach traffic peak.</p>
+      <h2>Where beach rescue costs rise</h2>
+      <p>For a beach community, the cost pressure is seasonal readiness, not law-enforcement overhead. More patrol hours, more launches, more standby time, and more consumables are required when tides, surf, and visitor volume peak.</p>
       <div class="cost-grid">
         {''.join(
             f'''
@@ -6310,7 +6458,37 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
             for item in coastal_costs
         )}
       </div>
-      <p class="footer-note">This is the right section to add your calculated financials later, because it lets you layer in patrol-hour assumptions, seasonal headcount, response-time savings, and avoided launch costs without changing the narrative structure.</p>
+      <p class="footer-note">This section is the right place to layer in patrol-hour assumptions, seasonal headcount, response-time savings, avoided launch costs, and other financial inputs when you are ready to build the pricing case.</p>
+    </section>
+
+    <section class="section">
+      <span class="badge">Drone Quantity</span>
+      <h2>Recommended Drone Mix</h2>
+      <p>Fleet size drives launch speed, endurance, and redundancy. The comparison below shows what each option adds to Fernandina Beach operations.</p>
+      <div class="mix-grid">
+        {''.join(
+            f'''
+            <div class="mix-card">
+              <div class="top">
+                <div>
+                  <div class="title">{_esc(item["title"])}</div>
+                  <div class="mission">{_esc(item["mission"])}</div>
+                </div>
+                <div class="value">{_esc(item["value"])}<span class="tip" data-tip="{_esc(item["support"])}">â“˜</span></div>
+              </div>
+              <div class="desc">Source: <a href="{_esc(item["source"])}" target="_blank" rel="noopener noreferrer">official reference</a></div>
+            </div>
+            '''
+            for item in drone_mix_rows
+        )}
+      </div>
+      <ul style="margin-top:14px;">
+        <li><strong>1 Responder:</strong> best when the customer wants the fastest single-unit beach overwatch and payload-drop capability for a lower-entry deployment.</li>
+        <li><strong>1 Guardian:</strong> best when the customer wants the strongest single-aircraft endurance and range for a larger shoreline or tide-sensitive operating window.</li>
+        <li><strong>2 units:</strong> best when one drone must stay available while the other is flying, charging, or staged at another beach access point.</li>
+        <li><strong>3 units:</strong> best when the customer wants a north-center-south posture with surge redundancy for peak season, special events, and bad surf days.</li>
+      </ul>
+      <p class="footer-note">For a coastal community, the value of additional aircraft is not just more flights. It is faster beach overwatch, less dead time between missions, and a command posture that can keep coverage alive during busy weekends and tide-driven surges.</p>
     </section>
 
     <section class="section">
@@ -6322,46 +6500,6 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
       <p class="footer-note">Use these sources to support the public safety framing: the Coast Guard for boating accident and life-jacket risk context, and NOAA/NWS for surf-zone, rip-current, and beach-safety guidance.</p>
     </section>
   </div>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script>
-    (function() {{
-      const points = {map_points_json};
-      const center = [{map_center_lat:.6f}, {map_center_lon:.6f}];
-      const map = L.map('fernandina-map', {{ scrollWheelZoom: false }}).setView(center, 12);
-      L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors'
-      }}).addTo(map);
-
-      const bounds = [];
-      points.forEach((pt, idx) => {{
-        const latlng = [Number(pt.lat), Number(pt.lon)];
-        bounds.push(latlng);
-        const icon = L.divIcon({{
-          className: '',
-          html: `<div style="width:18px;height:18px;border-radius:50%;background:${{pt.type === 'Police' ? '#58d6ff' : pt.type === 'Fire' ? '#f5c542' : '#34d399'}};border:2px solid #08131f;box-shadow:0 0 0 4px rgba(255,255,255,.8);"></div>`,
-          iconSize: [18, 18],
-          iconAnchor: [9, 9],
-        }});
-        L.marker(latlng, {{ icon }}).addTo(map).bindPopup(`<strong>${{pt.name}}</strong><br>${{pt.popup}}`);
-        L.circle(latlng, {{
-          radius: 450,
-          color: pt.type === 'Police' ? '#58d6ff' : pt.type === 'Fire' ? '#f5c542' : '#34d399',
-          fillColor: pt.type === 'Police' ? '#58d6ff' : pt.type === 'Fire' ? '#f5c542' : '#34d399',
-          fillOpacity: 0.08,
-          weight: 1,
-        }}).addTo(map);
-      }});
-
-      if (bounds.length > 1) {{
-        L.polyline(bounds, {{ color: '#0b5d78', weight: 3, opacity: 0.75, dashArray: '6 8' }}).addTo(map);
-        map.fitBounds(bounds, {{ padding: [28, 28] }});
-      }} else if (bounds.length === 1) {{
-        map.setView(bounds[0], 13);
-      }}
-    }})();
-  </script>
 </body>
 </html>"""
 
