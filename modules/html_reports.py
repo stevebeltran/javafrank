@@ -6044,7 +6044,8 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
         })
     map_center_lat = centroid_lat if centroid_lat else 30.637868
     map_center_lon = centroid_lon if centroid_lon else -81.437910
-    map_zoom = 11 if max_span <= 2.0 else 10 if max_span <= 5.0 else 9
+    map_zoom = 11 if max_span <= 3.0 else 10 if max_span <= 6.0 else 9
+    coverage_radius_mi = max(0.75, min(1.25, (max_span / 4.0) if max_span else 0.9))
     station_palette = ["#58d6ff", "#f5c542", "#34d399", "#fb7185", "#a78bfa"]
     legend_bg = "rgba(15, 23, 42, 0.92)"
     legend_text = "#e2e8f0"
@@ -6052,29 +6053,54 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
 
     map_fig = go.Figure()
     if map_points:
+        station_colors = []
+        station_lats = []
+        station_lons = []
+        station_text = []
         for idx, item in enumerate(map_points):
             color = station_palette[idx % len(station_palette)]
+            station_colors.append(color)
+            station_lats.append(item["lat"])
+            station_lons.append(item["lon"])
+            station_text.append(
+                f"<b>{_esc(item['name'])}</b><br>"
+                f"{_esc(item['type'])}<br>"
+                f"{_esc(item.get('address') or 'Address not provided')}"
+            )
+
+            clats, clons = get_circle_coords(item["lat"], item["lon"], r_mi=coverage_radius_mi)
             map_fig.add_trace(go.Scattermap(
-                lat=[item["lat"]],
-                lon=[item["lon"]],
-                mode="markers",
-                marker=dict(size=18, color=color),
-                name=f"{idx + 1}. {item['name']}",
-                hovertemplate=(
-                    f"<b>{_esc(item['name'])}</b><br>"
-                    f"{_esc(item['type'])}<br>"
-                    f"{_esc(item.get('address') or 'Address not provided')}<extra></extra>"
-                ),
-                showlegend=True,
+                lat=list(clats) + [None, item["lat"]],
+                lon=list(clons) + [None, item["lon"]],
+                mode="lines+markers",
+                line=dict(color=color, width=3),
+                marker=dict(size=[0] * len(clats) + [0, 14], color=color),
+                fill="toself",
+                fillcolor="rgba(0,0,0,0)",
+                name="Coverage Radius" if idx == 0 else None,
+                hoverinfo="skip",
+                showlegend=(idx == 0),
             ))
+
+        map_fig.add_trace(go.Scattermap(
+            lat=station_lats,
+            lon=station_lons,
+            mode="markers",
+            marker=dict(size=18, color=station_colors),
+            text=station_text,
+            customdata=station_text,
+            name="Station Nodes",
+            hovertemplate="%{customdata}<extra></extra>",
+            showlegend=True,
+        ))
 
         if len(map_points) > 1:
             map_fig.add_trace(go.Scattermap(
-                lat=[item["lat"] for item in map_points],
-                lon=[item["lon"] for item in map_points],
+                lat=station_lats,
+                lon=station_lons,
                 mode="lines",
                 line=dict(color="rgba(245,197,66,.85)", width=3),
-                name="Coverage Link",
+                name="Station Link",
                 hoverinfo="skip",
                 showlegend=True,
             ))
@@ -6086,7 +6112,7 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
             style="carto-darkmatter",
         ),
         margin=dict(l=0, r=0, t=0, b=0),
-        height=420,
+        height=500,
         showlegend=True,
         legend=dict(
             yanchor="top",
@@ -6103,7 +6129,7 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
     map_html = map_fig.to_html(
         full_html=False,
         include_plotlyjs="cdn",
-        default_height="420px",
+        default_height="500px",
         default_width="100%",
         config={"displayModeBar": False, "responsive": True},
     )
