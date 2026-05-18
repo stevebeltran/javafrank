@@ -5976,11 +5976,11 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
             "detail": "A water-patrol program often has to pay for skilled marine operators, not just land-based patrol time.",
         },
         {
-            "label": "Multi-agency rescue deployment",
+            "label": "Coordinated rescue response",
             "value": "~$96.31/hr",
             "support": "Illustrative direct labor floor built from Jacksonville area mean wage ($29.86/hr), EMT median wage ($41,340/yr, about $19.88/hr), water transportation workers ($66,490/yr, about $31.97/hr), and lifeguard median wage ($14.60/hr).",
             "source": "https://www.bls.gov/regions/southeast/news-release/occupationalemploymentandwages_jacksonville.htm",
-            "detail": "That is the direct payroll floor for a coordinated beach rescue that uses lifeguard overwatch, a marine launch, medical response, and a command layer before fuel, overtime, or equipment replenishment.",
+            "detail": "This is the direct payroll floor for a coordinated beach rescue that combines lifeguard overwatch, a marine launch, medical response, and command oversight before fuel, overtime, or equipment replenishment.",
         },
         {
             "label": "Launch / engine ops",
@@ -6015,14 +6015,14 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
     drone_mix_rows = [
         {
             "title": "1 Responder",
-            "mission": "Fast single-launch beach overwatch and payload-drop option",
+            "mission": "Fastest single-launch beach overwatch, person location, and payload-drop option",
             "value": "42 min / 44 mph",
             "support": "Responder is BRINC's purpose-made 911 response drone. BRINC lists 42 minutes of flight time, 44 mph top speed, 40x total zoom, 640px thermal, and payload-drop support for lifesaving equipment.",
             "source": "https://brincdrones.com/responder/",
         },
         {
             "title": "1 Guardian",
-            "mission": "Longest-endurance single-aircraft option for broader shoreline coverage",
+            "mission": "Best single-aircraft choice for peak-season crowd overwatch and person location across a larger shoreline",
             "value": "62 min / 60 mph",
             "support": "Guardian is BRINC's next-generation DFR drone with 62 minutes of flight time, 60 mph top speed, unlimited range with satellite connectivity, and a 10-lb payload capacity.",
             "source": "https://brincdrones.com/guardian/",
@@ -6521,11 +6521,12 @@ def generate_fernandina_beach_public_service_report_html(stations, *, city="Fern
         )}
       </div>
       <ul style="margin-top:14px;">
-        <li><strong>1 Responder:</strong> best when the customer wants the fastest single-unit beach overwatch and payload-drop capability for a lower-entry deployment.</li>
-        <li><strong>1 Guardian:</strong> best when the customer wants the strongest single-aircraft endurance and range for a larger shoreline or tide-sensitive operating window.</li>
+        <li><strong>1 Responder:</strong> best when the customer wants the fastest single-unit beach overwatch, person location, and payload-drop capability for a lower-entry deployment.</li>
+        <li><strong>1 Guardian:</strong> best when the customer wants the strongest single-aircraft endurance for peak-season crowd control, wider shoreline search, and person location during crowded beach days.</li>
         <li><strong>2 units:</strong> best when one drone must stay available while the other is flying, charging, or staged at another beach access point.</li>
         <li><strong>3 units:</strong> best when the customer wants a north-center-south posture with surge redundancy for peak season, special events, and bad surf days.</li>
       </ul>
+      <p><strong>Recommended if the customer buys only one unit:</strong> <strong>1 Guardian</strong>, because the longer flight time and wider operating reach make it the strongest single-aircraft choice for peak-season overwatch, crowd monitoring, and locating a missing swimmer or beachgoer before a ground or boat response is launched.</p>
       <p class="footer-note">For a coastal community, the value of additional aircraft is not just more flights. It is faster beach overwatch, less dead time between missions, and a command posture that can keep coverage alive during busy weekends and tide-driven surges.</p>
     </section>
 
