@@ -2,8 +2,6 @@
 import json
 import streamlit as st
 import streamlit.components.v1 as components
-import datetime
-import zoneinfo
 
 
 def render_transient_build_notice(__version__, __build_datetime__):
@@ -16,9 +14,6 @@ def render_transient_build_notice(__version__, __build_datetime__):
     ).strip().lower()
     if _notice_email != 'steven.beltran@brincdrones.com':
         return
-
-    # Get current time in Chicago CST
-    _chicago_time = datetime.datetime.now(zoneinfo.ZoneInfo("America/Chicago")).strftime("%H:%M:%S")
     components.html(
         f"""
 <!DOCTYPE html>
@@ -103,7 +98,7 @@ def render_transient_build_notice(__version__, __build_datetime__):
       <div class="brinc-build-notice">
         <div class="label">Last updated</div>
         <div class="version">Version ${{version}}</div>
-        <div class="time">{_chicago_time} CST</div>
+        <div class="time">{__build_datetime__}</div>
       </div>
     `;
     doc.body.appendChild(wrap);
