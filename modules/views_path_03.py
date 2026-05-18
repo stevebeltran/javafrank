@@ -11,12 +11,12 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from modules.config import (
-    DEMO_CITIES, FAST_DEMO_CITIES, FAST_DEMO_STATION_COUNT,
+    DEMO_CITIES, FAST_DEMO_CITIES,
     KNOWN_POPULATIONS, STATE_FIPS, US_STATES_ABBR,
 )
 from modules.geospatial_utils import (
     generate_clustered_calls, generate_random_points_in_polygon,
-    load_fast_demo_payload,
+    load_fast_demo_payload, FAST_DEMO_STATION_COUNT,
 )
 from modules.onboarding import (
     build_demo_boundaries, build_demo_calls, infer_simulation_targets_from_station_file,
@@ -26,14 +26,14 @@ from modules.census import (
     fetch_census_population, fetch_census_state_population,
 )
 from modules.geocoding import (
-    forward_geocode, reverse_geocode_state, search_public_facility_candidates,
+    forward_geocode, search_public_facility_candidates,
 )
 from modules.boundaries import (
     fetch_county_boundary_local, fetch_place_boundary_local, fetch_tiger_state_shapefile,
-    save_boundary_gdf,
+    save_boundary_gdf, reverse_geocode_state,
 )
 from modules.stations import generate_stations_from_calls
-from modules.rendering_helpers import get_themed_logo_base64, get_transparent_product_base64
+from modules.image_utils import get_themed_logo_base64, get_transparent_product_base64
 
 
 def render(submit_demo, _is_boundary_sidecar, _looks_like_stations, _load_uploaded_boundary_overlay):

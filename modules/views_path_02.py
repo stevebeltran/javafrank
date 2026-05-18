@@ -10,7 +10,7 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
-from modules.config import STATE_FIPS
+from modules.config import STATE_FIPS, get_jurisdiction_message, US_STATES_ABBR
 from modules.helpers import _uploaded_files_signature, _reset_census_state, format_wait_duration
 from modules.onboarding import (
     detect_brinc_file,
@@ -18,21 +18,26 @@ from modules.onboarding import (
     restore_brinc_session,
     split_uploaded_files,
     load_station_file,
+    detect_location_from_calls,
+    resolve_uploaded_boundaries,
 )
-from modules.geospatial_utils import (
+from modules.stations import (
     generate_stations_from_calls,
     _make_random_stations,
-    detect_location_from_calls,
-    US_STATES_ABBR,
-    reverse_geocode_state,
-    get_jurisdiction_message,
-    find_jurisdictions_by_coordinates,
     _select_best_boundary_for_calls,
+)
+from modules.boundaries import (
+    reverse_geocode_state,
     save_boundary_gdf,
-    resolve_uploaded_boundaries,
     _refresh_reference_population,
 )
-from modules.parse_calls import aggressive_parse_calls
+from modules.geospatial import (
+    find_jurisdictions_by_coordinates,
+)
+from modules.utilities import (
+    get_relevant_jurisdictions_cached,
+)
+from modules.cad_parser import aggressive_parse_calls
 from modules.census_batch import (
     build_census_staging,
     build_intersection_fallback_rows,
@@ -46,8 +51,8 @@ from modules.census_batch import (
     build_census_chunk_payload,
 )
 from modules.geocoding import geocode_intersection_fallback_rows
-from modules.crash_reporting import _write_crash_report, _notify_crash_email
-from modules.rendering_helpers import get_themed_logo_base64, get_transparent_product_base64
+from modules.notifications import _write_crash_report, _notify_crash_email
+from modules.image_utils import get_themed_logo_base64, get_transparent_product_base64
 
 
 def render():
