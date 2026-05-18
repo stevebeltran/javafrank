@@ -680,63 +680,116 @@ def resolve_uploaded_boundaries(
     file_state = str(file_meta.get('file_inferred_state', '') or '').strip().upper()
     prefer_file_boundary = str(session_state.get('location_detection_source', '') or '').strip().lower() == 'file'
 
-    if prefer_file_boundary and file_city and file_state and file_state in state_fips:
+    def _name_based_candidate():
+        if not file_city or not file_state or file_state not in state_fips:
+            return None
         set_stage(35, "Using the file-inferred city/state to resolve the boundary…")
-        boundary_success, boundary_gdf, boundary_kind, _ = select_best_boundary_for_calls(
+        boundary_success, boundary_gdf, boundary_kind, boundary_hits = select_best_boundary_for_calls(
             calls_for_boundary,
             file_city,
             file_state,
             prefer_county=False,
         )
-        session_state['boundary_kind'] = boundary_kind
-        if boundary_success and boundary_gdf is not None:
-            set_stage(85, "Saving the resolved boundary for faster reuse next time…")
-            saved_path = save_boundary_gdf(boundary_gdf, boundary_kind, file_city, file_state)
-            session_state['boundary_source_path'] = saved_path or ''
-            session_state['active_city'] = file_city
-            session_state['active_state'] = file_state
-            set_stage(100, "Boundary resolution complete.")
+        if not boundary_success or boundary_gdf is None:
+            return None
+        return {
+            'source': 'file_name',
+            'name': file_city,
+            'state': file_state,
+            'kind': boundary_kind,
+            'gdf': boundary_gdf,
+            'hits': int(boundary_hits or 0),
+        }
+
+    def _coord_based_candidate():
+        set_stage(35, "Looking for a boundary in the local cache…")
+        coord_gdf = find_jurisdictions_by_coordinates(calls_for_boundary)
+        if coord_gdf is None or coord_gdf.empty:
+            return None
+        top = coord_gdf.iloc[0]
+        display_name = str(top.get('DISPLAY_NAME', '') or '').strip()
+        if not display_name:
+            return None
+        boundary_kind = str(top.get('boundary_kind', '') or '').strip().lower()
+        if boundary_kind not in {'place', 'county', 'state'}:
+            boundary_kind = 'county' if display_name.lower().endswith(' county') else 'place'
+        return {
+            'source': 'coordinates',
+            'name': display_name,
+            'state': file_state or str(session_state.get('active_state', '') or '').strip().upper(),
+            'kind': boundary_kind,
+            'gdf': coord_gdf[['DISPLAY_NAME', 'geometry']].copy(),
+            'hits': int(top.get('data_count', 0) or 0),
+        }
+
+    name_candidate = _name_based_candidate() if prefer_file_boundary else None
+    coord_candidate = _coord_based_candidate()
+
+    chosen_candidate = None
+    if name_candidate and coord_candidate:
+        name_hits = int(name_candidate.get('hits', 0) or 0)
+        coord_hits = int(coord_candidate.get('hits', 0) or 0)
+        coord_name = str(coord_candidate.get('name', '') or '').strip().lower()
+        name_name = str(name_candidate.get('name', '') or '').strip().lower()
+        if coord_hits > name_hits or (coord_hits == name_hits and coord_name and name_name and coord_name != name_name):
+            chosen_candidate = coord_candidate
+            set_stage(70, f"Coordinates confirmed {coord_candidate['name']} with {coord_hits:,} matching call(s).")
+        else:
+            chosen_candidate = name_candidate
+            set_stage(70, f"File name confirmed {name_candidate['name']} with {name_hits:,} matching call(s).")
+    else:
+        chosen_candidate = coord_candidate or name_candidate
+
+    if chosen_candidate is None:
+        detected_city = session_state.get('active_city', '')
+        detected_state = session_state.get('active_state', '')
+        if not detected_city or not detected_state or detected_state not in state_fips:
+            set_stage(100, "No active city/state was available for boundary resolution.")
             stage_progress.empty()
             stage_box.empty()
             return
 
-    set_stage(35, "Looking for a boundary in the local cache…")
-    coord_gdf = find_jurisdictions_by_coordinates(calls_for_boundary)
-
-    if coord_gdf is not None and not coord_gdf.empty:
-        set_stage(100, "Boundary resolved from local coordinates.")
-        session_state['master_gdf_override'] = coord_gdf
-        session_state['boundary_source_path'] = 'local_parquet'
-        session_state['boundary_kind'] = 'place'
-        session_state['active_city'] = str(coord_gdf.iloc[0]['DISPLAY_NAME']).title()
+        city_text = str(detected_city).strip()
+        prefer_county = str(session_state.get('location_detection_source', '')) == 'centroid'
+        set_stage(55, "Selecting the best county or place boundary for the current jurisdiction…")
+        boundary_success, boundary_gdf, boundary_kind, _ = select_best_boundary_for_calls(
+            calls_for_boundary,
+            city_text,
+            detected_state,
+            prefer_county=prefer_county,
+        )
+        session_state['boundary_kind'] = boundary_kind
+        session_state['boundary_detection_mode'] = 'detected_city_fallback'
+        if boundary_success and boundary_gdf is not None:
+            set_stage(85, "Saving the resolved boundary for faster reuse next time…")
+            saved_path = save_boundary_gdf(boundary_gdf, boundary_kind, city_text, detected_state)
+            session_state['boundary_source_path'] = saved_path or ''
+            session_state['active_city'] = city_text
+            session_state['active_state'] = detected_state
+            session_state['master_gdf_override'] = boundary_gdf.copy()
+        set_stage(100, "Boundary resolution complete.")
         stage_progress.empty()
         stage_box.empty()
         return
 
-    session_state['master_gdf_override'] = None
-    detected_city = session_state.get('active_city', '')
-    detected_state = session_state.get('active_state', '')
-    if not detected_city or not detected_state or detected_state not in state_fips:
-        set_stage(100, "No active city/state was available for boundary resolution.")
-        stage_progress.empty()
-        stage_box.empty()
-        return
-
-    city_text = str(detected_city).strip()
-    prefer_county = str(session_state.get('location_detection_source', '')) == 'centroid'
-    set_stage(55, "Selecting the best county or place boundary for the current jurisdiction…")
-    boundary_success, boundary_gdf, boundary_kind, _ = select_best_boundary_for_calls(
-        calls_for_boundary,
-        city_text,
-        detected_state,
-        prefer_county=prefer_county,
+    chosen_gdf = chosen_candidate['gdf']
+    chosen_kind = chosen_candidate['kind']
+    chosen_name = chosen_candidate['name']
+    chosen_state = chosen_candidate['state']
+    session_state['boundary_detection_mode'] = chosen_candidate['source']
+    session_state['boundary_kind'] = chosen_kind
+    session_state['active_city'] = chosen_name
+    if chosen_state:
+        session_state['active_state'] = chosen_state
+    set_stage(85, "Saving the resolved boundary for faster reuse next time…")
+    saved_path = save_boundary_gdf(
+        chosen_gdf,
+        chosen_kind,
+        chosen_name,
+        chosen_state or file_state or str(session_state.get('active_state', '') or '').strip().upper(),
     )
-    session_state['boundary_kind'] = boundary_kind
-    if boundary_success and boundary_gdf is not None:
-        set_stage(85, "Saving the resolved boundary for faster reuse next time…")
-        saved_path = save_boundary_gdf(boundary_gdf, boundary_kind, city_text, detected_state)
-        session_state['boundary_source_path'] = saved_path or ''
-
+    session_state['boundary_source_path'] = saved_path or ''
+    session_state['master_gdf_override'] = chosen_gdf.copy()
     set_stage(100, "Boundary resolution complete.")
     stage_progress.empty()
     stage_box.empty()

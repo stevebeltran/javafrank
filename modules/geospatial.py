@@ -100,7 +100,7 @@ def _count_points_within_boundary(df_calls, boundary_geom_4326):
         return 0
     try:
         _pts = gpd.GeoSeries([Point(row['lon'], row['lat']) for _, row in df_calls.iterrows()], crs='EPSG:4326')
-        _cnt = sum(_pts.within(boundary_geom_4326))
+        _cnt = sum(_pts.within(boundary_geom_4326, align=False))
         return int(_cnt)
     except Exception:
         return 0
@@ -183,6 +183,7 @@ def find_jurisdictions_by_coordinates(df_calls, min_call_share=0.001, min_call_c
                     if not already:
                         results.append({
                             'DISPLAY_NAME': display,
+                            'boundary_kind': kind,
                             'data_count': int(cnt),
                             'geometry': row.geometry.iloc[0],
                         })

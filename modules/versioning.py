@@ -74,6 +74,22 @@ def _git_revision():
     return None
 
 
+def _git_short_hash():
+    """Return the current HEAD short hash when available."""
+    try:
+        _hash = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=_REPO_ROOT,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=5,
+        ).strip()
+        return _hash or None
+    except Exception:
+        pass
+    return None
+
+
 def _sync_build_meta():
     """
     Advance the revision when app.py has been saved since the last recorded build.
@@ -122,8 +138,10 @@ def _compute_build_info():
     _dt = datetime.datetime.fromtimestamp(_mtime)
     _monster_idx = min(max(_revision - 1, 0) // 50, len(_MONSTER_NAMES) - 1)
     _monster_name = _MONSTER_NAMES[_monster_idx]
+    _git_hash = _git_short_hash()
+    _version_suffix = f"-{_git_hash}" if _git_hash else ""
     return {
-        "version": f"{_dt:%y}{chr(ord('A') + _dt.month - 1)}{_dt:%d}-{_monster_name}-{_dt:%H%M}.{_revision}",
+        "version": f"{_dt:%y}{chr(ord('A') + _dt.month - 1)}{_dt:%d}-{_monster_name}-{_dt:%H%M}.{_revision}{_version_suffix}",
         "revision": _revision,
         "build_datetime": _dt.strftime("%Y-%m-%d %H:%M:%S"),
         "build_timestamp": _mtime,

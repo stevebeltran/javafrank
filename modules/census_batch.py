@@ -29,7 +29,7 @@ _STATE_ABBRS = set(STATE_FIPS.keys())
 _STATE_NAMES = {name.upper(): abbr for name, abbr in US_STATES_ABBR.items()}
 _EXCEL_EXTS = ('.xlsx', '.xls', '.xlsb', '.xlsm')
 _ADDRESS_HINTS = [
-    'address', 'location', 'incident_location', 'street_address', 'street',
+    'street', 'street_address', 'address', 'location', 'incident_location',
     'addr', 'block_address', 'call_location', 'full_address',
 ]
 _CITY_HINTS = ['city', 'city_name', 'municipality', 'town', 'village']
@@ -40,6 +40,11 @@ _NOISE_HINTS = [
     'date', 'time', 'priority', 'call', 'nature', 'type', 'desc',
     'agency', 'incident', 'case', 'event', 'status', 'zone', 'unit',
 ]
+_INTERSECTION_HINTS = (
+    ' / ',
+    ' & ',
+    ' AT ',
+)
 
 
 def _clean_text(value) -> str:
@@ -300,7 +305,12 @@ def load_raw_call_table(uploaded_file) -> pd.DataFrame:
                 best_df = _normalize_headerless_excel_frame(best_df)
             return best_df.reset_index(drop=True)
 
-    content = uploaded_file.getvalue().decode('utf-8', errors='ignore')
+    raw_bytes = uploaded_file.getvalue()
+    _jacksonville_df = _normalize_jacksonville_cfs_report(raw_bytes, filename=uploaded_file.name)
+    if _jacksonville_df is not None and not _jacksonville_df.empty:
+        return _jacksonville_df.reset_index(drop=True)
+
+    content = raw_bytes.decode('utf-8', errors='ignore')
     delim = _guess_delimiter(content)
     raw_df = pd.read_csv(io.StringIO(content), sep=delim, dtype=str)
     raw_df.columns = [str(c).lower().strip() for c in raw_df.columns]
@@ -455,6 +465,47 @@ def _build_street_series(raw_df: pd.DataFrame, street_cols: list[str]) -> pd.Ser
     return frame.apply(lambda row: ' '.join(_dedupe_tokens(row.tolist())), axis=1)
 
 
+def _looks_like_intersection(text: str) -> bool:
+    value = _clean_text(text).upper()
+    if not value:
+        return False
+    if any(hint in value for hint in _INTERSECTION_HINTS):
+        return True
+    return bool(re.search(r'\b(?:AND|CROSS(?:ING)?|INTERSECTION OF)\b', value))
+
+
+def _split_census_address_kinds(stage_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    if stage_df is None or stage_df.empty:
+        empty = pd.DataFrame(columns=stage_df.columns if stage_df is not None else [])
+        return empty.copy(), empty.copy()
+
+    work = stage_df.copy()
+    if 'is_intersection' not in work.columns:
+        work['is_intersection'] = False
+    if 'has_required_address' not in work.columns:
+        work['has_required_address'] = False
+    work['is_intersection'] = work['is_intersection'].fillna(False).astype(bool)
+    work['has_required_address'] = work['has_required_address'].fillna(False).astype(bool)
+    street_df = work[work['has_required_address'] & ~work['is_intersection']].copy().reset_index(drop=True)
+    intersection_df = work[work['has_required_address'] & work['is_intersection']].copy().reset_index(drop=True)
+    return street_df, intersection_df
+
+
+def build_intersection_fallback_rows(stage_df: pd.DataFrame) -> pd.DataFrame:
+    _, intersection_df = _split_census_address_kinds(stage_df)
+    if intersection_df.empty:
+        return intersection_df
+
+    fallback_df = intersection_df.copy()
+    fallback_df['intersection_query'] = fallback_df.apply(
+        lambda row: ', '.join(
+            [v for v in [row.get('street', ''), row.get('city', ''), row.get('state', ''), row.get('zip', '')] if _clean_text(v)]
+        ),
+        axis=1,
+    )
+    return fallback_df
+
+
 def build_census_staging(uploaded_files) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
     stage_parts = []
     original_parts = []
@@ -489,6 +540,8 @@ def build_census_staging(uploaded_files) -> tuple[pd.DataFrame, pd.DataFrame, di
         part['state'] = part['state'].map(_clean_state)
         part['zip'] = part['zip'].map(_clean_zip)
         part['urbanization'] = part['urbanization'].map(_clean_text)
+        part['is_intersection'] = part['street'].map(_looks_like_intersection)
+        part['address_kind'] = part['is_intersection'].map({True: 'intersection', False: 'street'})
         part['has_required_address'] = (
             part['street'].ne('') &
             part['city'].ne('') &
@@ -502,7 +555,8 @@ def build_census_staging(uploaded_files) -> tuple[pd.DataFrame, pd.DataFrame, di
         diagnostics.append({
             'file': uploaded_file.name,
             'rows': int(len(part)),
-            'ready_rows': int(part['has_required_address'].sum()),
+            'ready_rows': int((part['has_required_address'] & ~part['is_intersection']).sum()),
+            'intersection_rows': int((part['has_required_address'] & part['is_intersection']).sum()),
             'street_cols': list(layout['street_cols']),
             'city_col': layout['city_col'] or '',
             'state_col': layout['state_col'] or '',
@@ -516,14 +570,15 @@ def build_census_staging(uploaded_files) -> tuple[pd.DataFrame, pd.DataFrame, di
     summary = {
         'files': diagnostics,
         'rows_total': int(len(stage_df)),
-        'rows_ready': int(stage_df['has_required_address'].sum()) if not stage_df.empty else 0,
+        'rows_ready': int((stage_df['has_required_address'] & ~stage_df['is_intersection']).sum()) if not stage_df.empty else 0,
         'rows_missing': int((~stage_df['has_required_address']).sum()) if not stage_df.empty else 0,
+        'intersection_rows': int((stage_df['has_required_address'] & stage_df['is_intersection']).sum()) if 'is_intersection' in stage_df.columns else 0,
     }
     return stage_df, original_df, summary
 
 
 def make_census_batch_chunks(stage_df: pd.DataFrame, chunk_size: int = 10000) -> list[dict]:
-    ready_df = stage_df[stage_df['has_required_address']].copy().reset_index(drop=True)
+    ready_df, _intersection_df = _split_census_address_kinds(stage_df)
     chunks = []
     for start in range(0, len(ready_df), chunk_size):
         chunk = ready_df.iloc[start:start + chunk_size].copy().reset_index(drop=True)
@@ -561,7 +616,7 @@ def make_census_batch_zip(chunks: list[dict]) -> bytes:
 
 
 def make_sample_census_batch(stage_df: pd.DataFrame, sample_size: int = 250) -> dict | None:
-    ready_df = stage_df[stage_df['has_required_address']].copy()
+    ready_df, _intersection_df = _split_census_address_kinds(stage_df)
     if ready_df.empty:
         return None
     sample_df = ready_df.head(sample_size).copy()
