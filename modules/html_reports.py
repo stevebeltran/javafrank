@@ -3162,20 +3162,18 @@ def generate_executive_summary_pdf(
             browser = p.chromium.launch(**launch_kwargs)
             try:
                 page = browser.new_page(
-                    viewport={"width": 1600, "height": 900},
-                    device_scale_factor=1,
+                    viewport={"width": 1650, "height": 1275},
+                    device_scale_factor=2,
                 )
                 page.set_content(html_doc, wait_until="load")
                 page.wait_for_timeout(1800)
-                return page.pdf(
-                    format="Letter",
-                    landscape=True,
-                    print_background=True,
-                    prefer_css_page_size=True,
-                    margin={"top": "0.22in", "right": "0.22in", "bottom": "0.22in", "left": "0.22in"},
-                )
+                png_bytes = page.screenshot(type="png", full_page=False)
             finally:
                 browser.close()
+        screenshot = Image.open(io.BytesIO(png_bytes)).convert("RGB")
+        output = io.BytesIO()
+        screenshot.save(output, format="PDF", resolution=300.0)
+        return output.getvalue()
     except Exception as exc:
         print(f"[BRINC] Executive summary PDF render fallback engaged: {exc}")
         return _build_fallback_pdf_bytes()

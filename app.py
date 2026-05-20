@@ -10203,6 +10203,18 @@ body{{background:transparent;overflow:hidden}}
                     )
                 )
                 map_html_str = fig_for_export.to_html(full_html=False, include_plotlyjs='inline', default_height='500px', default_width='100%')
+                fig_for_pdf_export = go.Figure(fig_for_export)
+                _pdf_zoom = round(max(5, float(dynamic_zoom or 0) - 0.85), 2)
+                fig_for_pdf_export.update_layout(
+                    map=dict(center=dict(lat=center_lat, lon=center_lon), zoom=_pdf_zoom, style="carto-darkmatter"),
+                    margin=dict(l=0, r=0, t=0, b=0), height=720, showlegend=True,
+                    legend=dict(
+                        yanchor="top", y=0.98, xanchor="left", x=0.02,
+                        bgcolor=legend_bg, bordercolor="#444444", borderwidth=1,
+                        font=dict(color=legend_text, size=11)
+                    )
+                )
+                map_html_pdf_str = fig_for_pdf_export.to_html(full_html=False, include_plotlyjs='inline', default_height='720px', default_width='100%')
                 _visible_export_rows = [d for d in active_drones if not _is_call_density_station(d)]
                 station_rows = "".join(
                     f"<tr><td>{d['name']}</td><td>{d['type']}</td><td>{d['avg_time_min']:.1f} min</td><td>{d['faa_ceiling']}</td><td>${d['cost']:,}</td></tr>"
@@ -11964,7 +11976,7 @@ body{{background:transparent;overflow:hidden}}
                     guard_area_perc=float(guard_area_perc or 0),
                     resp_calls_perc=float(resp_calls_perc or 0),
                     resp_area_perc=float(resp_area_perc or 0),
-                    map_html_str=map_html_str,
+                    map_html_str=map_html_pdf_str,
                 )
             except Exception as _pdf_exc:
                 _executive_pdf_bytes = None
