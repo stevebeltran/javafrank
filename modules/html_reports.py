@@ -3196,6 +3196,8 @@ def generate_executive_summary_pdf(
     guard_area_perc,
     resp_calls_perc,
     resp_area_perc,
+    prepared_by_name=None,
+    prepared_date=None,
     map_png_bytes=None,
     map_html_str=None,
 ):
@@ -3222,6 +3224,13 @@ def generate_executive_summary_pdf(
     resp_strategy_raw = str(resp_strategy_raw or "Coverage").strip() or "Coverage"
     guardian_cost = int(CONFIG.get("GUARDIAN_COST", 0) or 0)
     responder_cost = int(CONFIG.get("RESPONDER_COST", 0) or 0)
+    prepared_by_name = str(prepared_by_name or "BRINC Representative").strip() or "BRINC Representative"
+    if prepared_date is None:
+        prepared_date = datetime.datetime.now().strftime("%B %d, %Y")
+    elif hasattr(prepared_date, "strftime"):
+        prepared_date = prepared_date.strftime("%B %d, %Y")
+    else:
+        prepared_date = str(prepared_date).strip() or datetime.datetime.now().strftime("%B %d, %Y")
 
     page_w, page_h = 3300, 2550
     margin = 88
@@ -3282,6 +3291,12 @@ def generate_executive_summary_pdf(
         "Fleet coverage overview and map snapshot in a single landscape page.",
         font=font_sub,
         fill=(205, 216, 229),
+    )
+    draw.text(
+        (124, 250),
+        f"Prepared by {prepared_by_name} · {prepared_date}",
+        font=font_small_bold,
+        fill=(180, 191, 204),
     )
 
     # header right metrics
@@ -3394,15 +3409,15 @@ def generate_executive_summary_pdf(
         fill=muted,
     )
 
-    map_shell = (right_box[0] + 24, right_box[1] + 104, right_box[2] - 24, right_box[3] - 26)
+    map_shell = (right_box[0] + 20, right_box[1] + 96, right_box[2] - 20, right_box[3] - 18)
     rr(map_shell, 22, (9, 16, 27), outline=(31, 45, 64), width=2)
     for frac in (0.25, 0.5, 0.75):
         x = map_shell[0] + int((map_shell[2] - map_shell[0]) * frac)
         y = map_shell[1] + int((map_shell[3] - map_shell[1]) * frac)
-        draw.line((x, map_shell[1] + 18, x, map_shell[3] - 18), fill=(27, 42, 58), width=2)
-        draw.line((map_shell[0] + 18, y, map_shell[2] - 18, y), fill=(27, 42, 58), width=2)
+        draw.line((x, map_shell[1] + 14, x, map_shell[3] - 14), fill=(27, 42, 58), width=2)
+        draw.line((map_shell[0] + 14, y, map_shell[2] - 14, y), fill=(27, 42, 58), width=2)
 
-    map_inner = (map_shell[0] + 18, map_shell[1] + 18, map_shell[2] - 18, map_shell[3] - 18)
+    map_inner = (map_shell[0] + 12, map_shell[1] + 12, map_shell[2] - 12, map_shell[3] - 12)
     draw.rounded_rectangle(map_inner, radius=18, outline=(184, 196, 210), width=2)
 
     map_img = None
@@ -3415,7 +3430,7 @@ def generate_executive_summary_pdf(
     if map_img is not None and map_img.width > 0 and map_img.height > 0:
         fitted = ImageOps.contain(
             map_img,
-            (map_inner[2] - map_inner[0] - 8, map_inner[3] - map_inner[1] - 8),
+            (map_inner[2] - map_inner[0] - 6, map_inner[3] - map_inner[1] - 6),
             method=Image.LANCZOS,
         )
         paste_x = map_inner[0] + ((map_inner[2] - map_inner[0]) - fitted.width) // 2

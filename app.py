@@ -2524,6 +2524,33 @@ def save_boundary_gdf(boundary_gdf, kind, name, state_abbr):
     """Save boundary to a type-specific shapefile base so place/county do not overwrite each other."""
     try:
         base = _boundary_shp_base(kind, name, state_abbr)
+        boundary_to_save = boundary_gdf.copy()
+        rename_map = {}
+        used_names = set()
+        for column in boundary_to_save.columns:
+            if column == boundary_to_save.geometry.name:
+                continue
+            if len(column) <= 10 and column not in used_names:
+                used_names.add(column)
+                continue
+
+            if column == "DISPLAY_NAME":
+                safe_name = "DISPLAY_NA"
+            else:
+                safe_name = re.sub(r"[^A-Za-z0-9_]", "_", str(column).upper())[:10] or "FIELD"
+
+            safe_base = safe_name[:10]
+            safe_name = safe_base
+            suffix = 1
+            while safe_name in used_names or safe_name == boundary_to_save.geometry.name:
+                suffix_text = str(suffix)
+                safe_name = f"{safe_base[:10 - len(suffix_text)]}{suffix_text}"
+                suffix += 1
+            rename_map[column] = safe_name
+            used_names.add(safe_name)
+
+        if rename_map:
+            boundary_to_save = boundary_to_save.rename(columns=rename_map)
         # Remove older files for this exact base so a fresh write wins cleanly
         for ext in [".shp", ".shx", ".dbf", ".prj", ".cpg"]:
             fp = base + ext
@@ -2532,7 +2559,7 @@ def save_boundary_gdf(boundary_gdf, kind, name, state_abbr):
                     os.remove(fp)
                 except Exception as e:
                     print(f"[BRINC] Could not remove old shapefile {fp}: {e}")
-        boundary_gdf.to_file(base + ".shp")
+        boundary_to_save.to_file(base + ".shp")
         return base + ".shp"
     except Exception as e:
         print(f"[BRINC] save_boundary_gdf failed for {kind}/{name}/{state_abbr}: {e}")
@@ -2544,6 +2571,8 @@ def load_saved_boundary(kind, name, state_abbr):
         exact = _boundary_shp_base(kind, name, state_abbr) + ".shp"
         if os.path.exists(exact):
             gdf = gpd.read_file(exact)
+            if "DISPLAY_NA" in gdf.columns and "DISPLAY_NAME" not in gdf.columns:
+                gdf = gdf.rename(columns={"DISPLAY_NA": "DISPLAY_NAME"})
             if gdf.crs is None:
                 gdf = gdf.set_crs(epsg=4269)
             return gdf.to_crs(epsg=4326)
@@ -12006,6 +12035,8 @@ body{{background:transparent;overflow:hidden}}
                     guard_area_perc=float(guard_area_perc or 0),
                     resp_calls_perc=float(resp_calls_perc or 0),
                     resp_area_perc=float(resp_area_perc or 0),
+                    prepared_by_name=prop_name,
+                    prepared_date=datetime.datetime.now(),
                     map_png_bytes=map_png_bytes,
                 )
             except Exception as _pdf_exc:
