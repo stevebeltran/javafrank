@@ -10214,7 +10214,35 @@ body{{background:transparent;overflow:hidden}}
                         font=dict(color=legend_text, size=11)
                     )
                 )
-                map_png_bytes = fig_for_pdf_export.to_image(format='png', width=1400, height=900, scale=2)
+                def _ensure_kaleido_browser():
+                    browser_path = os.environ.get("BROWSER_PATH", "").strip()
+                    if browser_path and Path(browser_path).is_file():
+                        return browser_path
+                    try:
+                        from kaleido import get_chrome_sync
+                        browser_path = str(get_chrome_sync(verbose=False))
+                        if browser_path and Path(browser_path).is_file():
+                            os.environ["BROWSER_PATH"] = browser_path
+                            browser_dir = str(Path(browser_path).parent)
+                            os.environ["PATH"] = browser_dir + os.pathsep + os.environ.get("PATH", "")
+                            return browser_path
+                    except Exception as _chrome_exc:
+                        print(f"[BRINC] Chrome bootstrap for PDF export failed: {_chrome_exc}")
+                    return None
+
+                try:
+                    map_png_bytes = fig_for_pdf_export.to_image(format='png', width=1400, height=900, scale=2)
+                except Exception as _png_exc:
+                    _chrome_path = _ensure_kaleido_browser()
+                    if _chrome_path:
+                        try:
+                            map_png_bytes = fig_for_pdf_export.to_image(format='png', width=1400, height=900, scale=2)
+                        except Exception as _retry_exc:
+                            print(f"[BRINC] Executive summary map PNG retry failed: {_retry_exc}")
+                            map_png_bytes = None
+                    else:
+                        print(f"[BRINC] Executive summary map PNG render unavailable: {_png_exc}")
+                        map_png_bytes = None
                 _visible_export_rows = [d for d in active_drones if not _is_call_density_station(d)]
                 station_rows = "".join(
                     f"<tr><td>{d['name']}</td><td>{d['type']}</td><td>{d['avg_time_min']:.1f} min</td><td>{d['faa_ceiling']}</td><td>${d['cost']:,}</td></tr>"
