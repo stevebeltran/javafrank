@@ -1494,8 +1494,14 @@ def prepare_runtime_context(
         faa_feature_count = len(faa_geojson.get('features', [])) if isinstance(faa_geojson, dict) and faa_geojson.get('features') else 0
         if faa_feature_count == 0:
             st.sidebar.warning('FAA data not loading (0 zones). Check Display Options.')
-    with st.spinner(get_airfield_message()):
-        airfields = faa_rf_module.fetch_airfields(minx, miny, maxx, maxy)
+    airfield_cache = session_state.setdefault('_airfields_cache', {})
+    airfield_cache_key = f"{str(session_state.get('active_city', '')).strip().lower()}|{str(session_state.get('active_state', '')).strip().lower()}|{bounds_hash}"
+    if airfield_cache_key in airfield_cache:
+        airfields = airfield_cache[airfield_cache_key]
+    else:
+        with st.spinner(get_airfield_message()):
+            airfields = faa_rf_module.fetch_airfields(minx, miny, maxx, maxy)
+        airfield_cache[airfield_cache_key] = airfields
 
     st.sidebar.markdown('<div class="sidebar-section-header">③ Budget & Downloads</div>', unsafe_allow_html=True)
     budget_expander = st.sidebar.expander('Budget Inputs', expanded=False)
