@@ -3224,121 +3224,177 @@ def generate_executive_summary_pdf(
     responder_cost = int(CONFIG.get("RESPONDER_COST", 0) or 0)
 
     page_w, page_h = 3300, 2550
-    margin = 90
-    header_h = 212
-    panel_top = margin + header_h + 18
+    margin = 88
+    header_h = 220
+    gutter = 24
+    panel_top = margin + header_h + 16
     panel_bottom = page_h - margin
-    left_box = (margin, panel_top, 1410, panel_bottom)
-    right_box = (1490, panel_top, page_w - margin, panel_bottom)
+    left_box = (margin, panel_top, 1440, panel_bottom)
+    right_box = (1472, panel_top, page_w - margin, panel_bottom)
 
-    bg = (244, 247, 251)
+    bg = (242, 245, 249)
     white = (255, 255, 255)
-    navy = (7, 18, 31)
-    navy_2 = (12, 31, 52)
-    ink = (15, 23, 42)
-    muted = (96, 111, 132)
+    navy = (10, 20, 33)
+    navy_2 = (18, 34, 54)
+    ink = (18, 25, 39)
+    muted = (101, 115, 136)
     line = (217, 226, 236)
     cyan = (0, 210, 255)
+    cyan_soft = (214, 248, 255)
     gold = (255, 213, 74)
+    gold_soft = (255, 245, 194)
     green = (22, 163, 74)
+    green_soft = (228, 248, 232)
 
     page = Image.new("RGBA", (page_w, page_h), bg + (255,))
     draw = ImageDraw.Draw(page)
 
     try:
-        font_title = _load_pdf_font(44, bold=True)
-        font_sub = _load_pdf_font(18, bold=False)
-        font_small = _load_pdf_font(14, bold=False)
-        font_small_bold = _load_pdf_font(14, bold=True)
-        font_chip = _load_pdf_font(18, bold=True)
-        font_card = _load_pdf_font(26, bold=True)
-        font_card_small = _load_pdf_font(14, bold=False)
-        font_card_label = _load_pdf_font(12, bold=True)
+        font_kicker = _load_pdf_font(12, bold=True)
+        font_title = _load_pdf_font(42, bold=True)
+        font_sub = _load_pdf_font(17, bold=False)
+        font_panel_title = _load_pdf_font(16, bold=True)
+        font_small = _load_pdf_font(13, bold=False)
+        font_small_bold = _load_pdf_font(13, bold=True)
+        font_stat = _load_pdf_font(24, bold=True)
+        font_tile_num = _load_pdf_font(28, bold=True)
+        font_tile_label = _load_pdf_font(11, bold=True)
+        font_tile_value = _load_pdf_font(18, bold=True)
     except Exception:
-        font_title = font_sub = font_small = font_small_bold = font_chip = font_card = font_card_small = font_card_label = ImageFont.load_default()
+        font_kicker = font_title = font_sub = font_panel_title = font_small = font_small_bold = font_stat = font_tile_num = font_tile_label = font_tile_value = ImageFont.load_default()
 
     def rr(box, radius, fill, outline=None, width=1):
         _rounded_rect(draw, box, radius, fill, outline=outline, width=width)
 
-    # Background and header
-    rr((margin, margin, page_w - margin, page_h - margin), 28, white, outline=line, width=3)
-    rr((margin, margin, page_w - margin, margin + header_h), 28, navy, outline=navy_2, width=2)
-    draw.rectangle((margin, margin + 70, page_w - margin, margin + 78), fill=cyan)
-    draw.text((126, 126), "Executive Summary PDF", font=font_small_bold, fill=cyan)
-    draw.text((126, 170), city_label, font=font_title, fill=white)
+    def text_size(value, font_obj):
+        return _text_box(draw, value, font_obj)
+
+    # page frame
+    rr((margin, margin, page_w - margin, page_h - margin), 30, white, outline=line, width=3)
+    rr((margin, margin, page_w - margin, margin + header_h), 30, navy, outline=navy_2, width=2)
+    draw.rectangle((margin, margin + 72, page_w - margin, margin + 80), fill=cyan)
+
+    # header left
+    draw.text((124, 126), "EXECUTIVE SUMMARY", font=font_kicker, fill=cyan)
+    draw.text((124, 168), city_label, font=font_title, fill=white)
     draw.text(
-        (126, 224),
-        "Sections 02 and 03 condensed into a single landscape page for a clean static briefing.",
+        (124, 220),
+        "Fleet coverage overview and map snapshot in a single landscape page.",
         font=font_sub,
         fill=(205, 216, 229),
     )
 
-    chips = [
-        ("Call coverage", f"{calls_covered_perc:.1f}%", cyan),
-        ("Area coverage", f"{area_covered_perc:.1f}%", gold),
-        ("Annual savings", f"${annual_savings:,.0f}", green),
-        ("Fleet size", f"{total_units} units", white),
+    # header right metrics
+    stat_cards = [
+        ("Call coverage", f"{calls_covered_perc:.1f}%", cyan, cyan_soft),
+        ("Area coverage", f"{area_covered_perc:.1f}%", gold, gold_soft),
+        ("Annual savings", f"${annual_savings:,.0f}", green, green_soft),
+        ("Fleet size", f"{total_units} units", (122, 147, 171), (236, 242, 247)),
     ]
-    chip_x = 1980
-    chip_y = 118
-    chip_w = 290
-    chip_h = 72
-    for idx, (label, value, accent) in enumerate(chips):
-        x0 = chip_x + (idx % 2) * (chip_w + 18)
-        y0 = chip_y + (idx // 2) * (chip_h + 14)
-        rr((x0, y0, x0 + chip_w, y0 + chip_h), 18, (255, 255, 255, 22), outline=(255, 255, 255, 28), width=1)
-        draw.text((x0 + 16, y0 + 10), label.upper(), font=font_small, fill=(197, 208, 219))
-        draw.text((x0 + 16, y0 + 34), value, font=font_chip, fill=accent)
+    card_w = 300
+    card_h = 76
+    stat_x = 1940
+    stat_y = 112
+    for idx, (label, value, accent, fill_soft) in enumerate(stat_cards):
+        x0 = stat_x + (idx % 2) * (card_w + 18)
+        y0 = stat_y + (idx // 2) * (card_h + 14)
+        rr((x0, y0, x0 + card_w, y0 + card_h), 18, (255, 255, 255, 24), outline=(255, 255, 255, 28), width=1)
+        draw.rounded_rectangle((x0 + 12, y0 + 12, x0 + 48, y0 + 48), radius=11, fill=fill_soft, outline=accent, width=2)
+        draw.text((x0 + 21, y0 + 17), label[:1].upper(), font=font_small_bold, fill=accent)
+        draw.text((x0 + 60, y0 + 11), label.upper(), font=font_small, fill=(200, 210, 221))
+        draw.text((x0 + 60, y0 + 35), value, font=font_stat, fill=white)
 
-    # Left panel
-    rr(left_box, 24, white, outline=line, width=3)
-    draw.text((left_box[0] + 28, left_box[1] + 24), "02  Fleet & Coverage", font=font_small_bold, fill=cyan)
+    # left panel
+    rr(left_box, 26, (250, 252, 254), outline=line, width=3)
+    draw.text((left_box[0] + 30, left_box[1] + 24), "02  FLEET COVERAGE", font=font_panel_title, fill=cyan)
     draw.text(
-        (left_box[0] + 28, left_box[1] + 56),
-        "Two-fleet architecture, operational radius, and the modeled coverage split for the active deployment.",
+        (left_box[0] + 30, left_box[1] + 54),
+        "City-specific deployment mix, operational range, and modeled coverage performance.",
         font=font_small,
         fill=muted,
     )
 
-    guardian_box = (left_box[0] + 24, left_box[1] + 120, left_box[2] - 24, left_box[1] + 560)
-    responder_box = (left_box[0] + 24, left_box[1] + 594, left_box[2] - 24, left_box[1] + 1034)
-
-    def draw_fleet_card(box, emoji, name, unit_count, radius, strategy, capex, call_pct, area_pct, accent, title_fill):
+    def draw_fleet_tile(box, label, unit_count, radius, strategy, capex, call_pct, area_pct, accent, accent_soft):
         x0, y0, x1, y1 = box
-        rr(box, 22, navy, outline=accent if accent != white else line, width=2)
-        draw.rounded_rectangle((x0 + 22, y0 + 22, x0 + 66, y0 + 66), radius=12, fill=(255, 255, 255, 18), outline=(255, 255, 255, 32), width=1)
-        draw.text((x0 + 30, y0 + 27), emoji, font=font_card, fill=white)
-        draw.text((x0 + 84, y0 + 22), name, font=font_small_bold, fill=title_fill)
-        draw.text((x0 + 84, y0 + 48), f"{unit_count} Unit{'s' if unit_count != 1 else ''}", font=font_card, fill=accent)
-        draw.text((x0 + 24, y0 + 100), f"{radius:g}-mile operational radius · {strategy}", font=font_card_small, fill=(209, 219, 232))
+        rr(box, 22, white, outline=line, width=2)
+        draw.rectangle((x0, y0, x0 + 8, y1), fill=accent)
+        draw.rounded_rectangle((x0 + 22, y0 + 18, x0 + 94, y0 + 90), radius=18, fill=accent_soft, outline=accent, width=2)
+        count_w, _ = text_size(str(unit_count), font_tile_num)
+        draw.text((x0 + 58 - count_w / 2, y0 + 30), str(unit_count), font=font_tile_num, fill=accent)
+        draw.text((x0 + 114, y0 + 20), label, font=font_small_bold, fill=ink)
+        draw.text((x0 + 114, y0 + 46), f"{radius:g}-mile operational radius", font=font_small, fill=muted)
+        draw.text((x0 + 114, y0 + 70), strategy, font=font_small, fill=muted)
 
-        stat_y = y0 + 172
-        for idx, (label, value) in enumerate(
-            [
-                ("Unit CapEx", f"${capex:,}"),
-                ("Call Coverage", f"{call_pct:.1f}%"),
-                ("Area Coverage", f"{area_pct:.1f}%"),
-            ]
-        ):
-            sx0 = x0 + 22 + idx * 195
-            rr((sx0, stat_y, sx0 + 174, stat_y + 138), 16, (255, 255, 255, 12), outline=(255, 255, 255, 18), width=1)
-            draw.text((sx0 + 12, stat_y + 14), label.upper(), font=font_card_label, fill=(184, 193, 205))
-            draw.text((sx0 + 12, stat_y + 52), value, font=font_card, fill=accent)
+        metric_y = y0 + 112
+        metric_w = 190
+        metric_gap = 18
+        metric_specs = [
+            ("CapEx", f"${capex:,}"),
+            ("Call coverage", f"{call_pct:.1f}%"),
+            ("Area coverage", f"{area_pct:.1f}%"),
+        ]
+        for idx, (m_label, m_value) in enumerate(metric_specs):
+            mx0 = x0 + 24 + idx * (metric_w + metric_gap)
+            rr((mx0, metric_y, mx0 + metric_w, metric_y + 136), 16, (248, 250, 252), outline=line, width=1)
+            draw.text((mx0 + 14, metric_y + 16), m_label.upper(), font=font_tile_label, fill=muted)
+            draw.text((mx0 + 14, metric_y + 52), m_value, font=font_tile_value, fill=ink)
+        draw.text((x0 + 24, y1 - 34), "Modeled deployment performance", font=font_small, fill=muted)
 
-    draw_fleet_card(guardian_box, "🦅", "BRINC Guardian", guardian_count, guard_radius_mi, guard_strategy_raw, guardian_cost, guard_calls_perc, guard_area_perc, gold, (255, 245, 194))
-    draw_fleet_card(responder_box, "🚁", "BRINC Responder", responder_count, resp_radius_mi, resp_strategy_raw, responder_cost, resp_calls_perc, resp_area_perc, cyan, (214, 248, 255))
+    guardian_box = (left_box[0] + 24, left_box[1] + 116, left_box[2] - 24, left_box[1] + 392)
+    responder_box = (left_box[0] + 24, left_box[1] + 416, left_box[2] - 24, left_box[1] + 692)
+    draw_fleet_tile(
+        guardian_box,
+        "BRINC Guardian",
+        guardian_count,
+        guard_radius_mi,
+        guard_strategy_raw,
+        guardian_cost,
+        guard_calls_perc,
+        guard_area_perc,
+        gold,
+        gold_soft,
+    )
+    draw_fleet_tile(
+        responder_box,
+        "BRINC Responder",
+        responder_count,
+        resp_radius_mi,
+        resp_strategy_raw,
+        responder_cost,
+        resp_calls_perc,
+        resp_area_perc,
+        cyan,
+        cyan_soft,
+    )
 
-    # Right panel
-    rr(right_box, 24, white, outline=line, width=3)
-    draw.text((right_box[0] + 28, right_box[1] + 24), "03  Coverage Map", font=font_small_bold, fill=cyan)
+    # left footer callout
+    summary_top = left_box[1] + 732
+    rr((left_box[0] + 24, summary_top, left_box[2] - 24, summary_top + 126), 18, (245, 248, 251), outline=line, width=1)
+    draw.text((left_box[0] + 42, summary_top + 22), "Deployment summary", font=font_small_bold, fill=ink)
     draw.text(
-        (right_box[0] + 28, right_box[1] + 56),
-        "Static export of the modelled coverage map. The layout is scaled to stay on one landscape page.",
+        (left_box[0] + 42, summary_top + 52),
+        f"{city_name} is modeled at {calls_covered_perc:.1f}% call coverage and {area_covered_perc:.1f}% area coverage with {total_units} total units.",
+        font=font_small,
+        fill=muted,
+    )
+    draw.text(
+        (left_box[0] + 42, summary_top + 82),
+        "The layout keeps the hierarchy simple: city, coverage values, fleet mix, then map.",
         font=font_small,
         fill=muted,
     )
 
-    map_shell = (right_box[0] + 24, right_box[1] + 112, right_box[2] - 24, right_box[3] - 30)
+    # right panel
+    rr(right_box, 26, white, outline=line, width=3)
+    draw.text((right_box[0] + 30, right_box[1] + 24), "03  COVERAGE MAP", font=font_panel_title, fill=cyan)
+    draw.text(
+        (right_box[0] + 30, right_box[1] + 54),
+        "Static export of the modeled jurisdiction map, sized to fit cleanly on one page.",
+        font=font_small,
+        fill=muted,
+    )
+
+    map_shell = (right_box[0] + 24, right_box[1] + 104, right_box[2] - 24, right_box[3] - 26)
     rr(map_shell, 22, (9, 16, 27), outline=(31, 45, 64), width=2)
     for frac in (0.25, 0.5, 0.75):
         x = map_shell[0] + int((map_shell[2] - map_shell[0]) * frac)
@@ -3367,12 +3423,12 @@ def generate_executive_summary_pdf(
         page.paste(fitted, (paste_x, paste_y), fitted)
     else:
         rr((map_inner[0] + 24, map_inner[1] + 24, map_inner[2] - 24, map_inner[3] - 24), 20, (17, 24, 39), outline=cyan, width=2)
-        draw.text((map_inner[0] + 64, map_inner[1] + 78), "Map preview unavailable", font=font_card, fill=white)
+        draw.text((map_inner[0] + 64, map_inner[1] + 78), "Map preview unavailable", font=font_tile_value, fill=white)
         draw.text((map_inner[0] + 64, map_inner[1] + 130), "The exported PNG was not available for this run.", font=font_small, fill=(201, 210, 220))
         draw.text((map_inner[0] + 64, map_inner[1] + 176), "A clean PDF is still produced without the browser path.", font=font_small, fill=(201, 210, 220))
 
     draw.text(
-        (right_box[0] + 28, right_box[3] - 24),
+        (right_box[0] + 30, right_box[3] - 24),
         "Coverage rings are operational estimates. Map content is rendered statically for PDF export.",
         font=font_small,
         fill=muted,
