@@ -9,6 +9,7 @@ import streamlit as st
 import pandas as pd
 import os
 import sys
+import shutil
 import textwrap
 # Set CWD to the project root so every relative asset path (parquets, shapefiles,
 # logos, etc.) resolves correctly regardless of how the process was launched.
@@ -10218,16 +10219,17 @@ body{{background:transparent;overflow:hidden}}
                     browser_path = os.environ.get("BROWSER_PATH", "").strip()
                     if browser_path and Path(browser_path).is_file():
                         return browser_path
-                    try:
-                        from kaleido import get_chrome_sync
-                        browser_path = str(get_chrome_sync(verbose=False))
-                        if browser_path and Path(browser_path).is_file():
-                            os.environ["BROWSER_PATH"] = browser_path
-                            browser_dir = str(Path(browser_path).parent)
+                    for candidate in (
+                        shutil.which("chromium"),
+                        shutil.which("chromium-browser"),
+                        shutil.which("google-chrome"),
+                        shutil.which("google-chrome-stable"),
+                    ):
+                        if candidate and Path(candidate).is_file():
+                            os.environ["BROWSER_PATH"] = candidate
+                            browser_dir = str(Path(candidate).parent)
                             os.environ["PATH"] = browser_dir + os.pathsep + os.environ.get("PATH", "")
-                            return browser_path
-                    except Exception as _chrome_exc:
-                        print(f"[BRINC] Chrome bootstrap for PDF export failed: {_chrome_exc}")
+                            return candidate
                     return None
 
                 try:
