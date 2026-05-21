@@ -1048,53 +1048,90 @@ def aggressive_parse_calls(uploaded_files, require_valid_coordinates=True):
                 elif fname.endswith('.xlsb'):
                     engine = 'pyxlsb'
 
+                def _row_score(row):
+                    values = [v for v in row if v is not None and str(v).strip() != '']
+                    if not values:
+                        return -10**6
+                    text_vals = [str(v).strip().lower() for v in values]
+                    joined = ' '.join(text_vals)
+                    hints = [
+                        'incident number', 'incident', 'cfs', 'call', 'call priority',
+                        'priority', 'latitude', 'lat', 'longitude', 'lon', 'location',
+                        'date time', 'datetime', 'date', 'time', 'address', 'ori',
+                    ]
+                    score = sum(10 for h in text_vals if any(k == h or k in h for k in hints))
+                    score += sum(2 for h in text_vals if not re.match(r'^column\d+$', h))
+                    if any(k in joined for k in ('lat', 'lon', 'latitude', 'longitude')):
+                        score += 25
+                    if any(k in joined for k in ('incident number', 'call priority', 'date time')):
+                        score += 20
+                    if len(values) <= 3:
+                        score -= 5
+                    return score
+
                 def _sheet_score(ws):
                     score = 0
-                    rows = list(ws.iter_rows(min_row=1, max_row=3, values_only=True))
+                    rows = list(ws.iter_rows(min_row=1, max_row=8, values_only=True))
                     if not rows:
                         return -1
-                    header = rows[0] or []
-                    header_norm = [str(h).strip().lower() for h in header if h is not None]
-                    if not header_norm:
-                        return -1
-                    hints = ['latitude', 'longitude', 'lat', 'lon', 'priority', 'location', 'date', 'time']
-                    score += sum(10 for h in header_norm if any(k == h or k in h for k in hints))
-                    score += sum(1 for h in header_norm if h and not re.match(r'^column\d+$', h))
-                    if len(rows) > 1 and rows[1] and any(v is not None and str(v).strip() != '' for v in rows[1]):
-                        score += 25
+                    score = max((_row_score(row) for row in rows), default=-10**6)
+                    first_row = rows[0] or []
+                    first_norm = [str(h).strip().lower() for h in first_row if h is not None]
                     # Penalize external-data placeholder sheets
-                    if len(header_norm) == 1 and header_norm[0].startswith('externaldata_'):
+                    if len(first_norm) == 1 and first_norm[0].startswith('externaldata_'):
                         score -= 100
                     return score
+
+                def _build_excel_frame(rows):
+                    if not rows:
+                        raise ValueError("Selected Excel sheet is empty.")
+
+                    header_candidates = []
+                    for idx, row in enumerate(rows[:10]):
+                        score = _row_score(row)
+                        if score > 0:
+                            header_candidates.append((score, idx, row))
+
+                    if header_candidates:
+                        header_candidates.sort(key=lambda x: (x[0], -x[1]), reverse=True)
+                        header_row_idx = header_candidates[0][1]
+                    else:
+                        header_row_idx = 0
+
+                    headers_raw = rows[header_row_idx] if header_row_idx < len(rows) else rows[0]
+                    if headers_raw is None:
+                        raise ValueError("Selected Excel sheet has no header row.")
+
+                    _real_idx = [
+                        i for i, h in enumerate(headers_raw)
+                        if h is not None and not (str(h).startswith('Column') and str(h)[6:].isdigit())
+                    ]
+                    if not _real_idx:
+                        _real_idx = [i for i, h in enumerate(headers_raw) if h is not None]
+                    if not _real_idx:
+                        raise ValueError("Selected Excel sheet has no usable columns.")
+
+                    _real_headers = [str(headers_raw[i]).lower().strip() for i in _real_idx]
+                    _rows_data = []
+                    for _row in rows[header_row_idx + 1:]:
+                        if _row is None:
+                            continue
+                        _trimmed = [_row[i] if i < len(_row) else None for i in _real_idx]
+                        if any(v is not None and str(v).strip() != '' for v in _trimmed):
+                            _rows_data.append(_trimmed)
+                    frame = pd.DataFrame(_rows_data, columns=_real_headers)
+                    frame = frame.dropna(how='all')
+                    frame.columns = [str(c).lower().strip() for c in frame.columns]
+                    return _deduplicate_columns(frame)
 
                 try:
                     import openpyxl as _oxl
                     _wb = _oxl.load_workbook(io.BytesIO(raw_bytes), read_only=True, data_only=True)
                     _sheet_name = max(_wb.sheetnames, key=lambda sn: _sheet_score(_wb[sn]))
                     _ws = _wb[_sheet_name]
-                    _row_iter = _ws.iter_rows(values_only=True)
-                    _headers_raw = next(_row_iter)
-                    if _headers_raw is None:
-                        raise ValueError("Selected Excel sheet has no header row.")
-                    _real_idx = [
-                        i for i, h in enumerate(_headers_raw)
-                        if h is not None and not (str(h).startswith('Column') and str(h)[6:].isdigit())
-                    ]
-                    if not _real_idx:
-                        _real_idx = [i for i, h in enumerate(_headers_raw) if h is not None]
-                    _real_headers = [str(_headers_raw[i]).lower().strip() for i in _real_idx]
-                    _rows_data = []
-                    for _row in _row_iter:
-                        if _row is None:
-                            continue
-                        _trimmed = [_row[i] if i < len(_row) else None for i in _real_idx]
-                        if any(v is not None and str(v).strip() != '' for v in _trimmed):
-                            _rows_data.append(_trimmed)
+                    _rows = list(_ws.iter_rows(values_only=True))
+                    raw_df = _build_excel_frame(_rows)
                     _wb.close()
-                    raw_df = pd.DataFrame(_rows_data, columns=_real_headers)
-                    raw_df = raw_df.dropna(how='all')
-                    raw_df.columns = [str(c).lower().strip() for c in raw_df.columns]
-                    raw_df = _deduplicate_columns(raw_df)
                 except Exception as _xe:
                     raw_df = None
                     # Try all sheets with pandas and pick the one that looks most like CAD data
@@ -1114,6 +1151,22 @@ def aggressive_parse_calls(uploaded_files, require_valid_coordinates=True):
                             _score += min(len(_df), 100)
                             if len(_df.columns) == 1 and str(_df.columns[0]).startswith('externaldata_'):
                                 _score -= 100
+                            if _score <= 0:
+                                try:
+                                    _candidate = pd.read_excel(io.BytesIO(raw_bytes), engine=engine, sheet_name=_sn, header=None)
+                                    if not _candidate.empty:
+                                        _candidate = _candidate.fillna('')
+                                        for _ridx in range(min(len(_candidate), 10)):
+                                            _row_txt = ' '.join(
+                                                str(v).strip().lower()
+                                                for v in _candidate.iloc[_ridx].tolist()
+                                                if str(v).strip()
+                                            )
+                                            if any(k in _row_txt for k in ('lat', 'lon', 'latitude', 'longitude', 'incident number', 'date time', 'call priority')):
+                                                _score += 50
+                                                break
+                                except Exception:
+                                    pass
                             if _score > best_score:
                                 best_score = _score
                                 best_df = _df
