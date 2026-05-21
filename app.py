@@ -5088,7 +5088,7 @@ def main():
     + '<div class="fl-made">MADE IN THE USA</div>'
     + '<div class="fl-copy">Parsing calls, resolving boundaries, and preparing deployment analysis.</div>'
     + '<div class="fl-prog-wrap"><div class="fl-prog-meta"><span id="fl-prog-label">Progress</span><span id="fl-prog-pct">0%</span></div><div class="fl-prog"><div class="fl-prog-bar" id="fl-prog-bar"></div></div></div>'
-    + '<div class="fl-log" id="fl-log">Waiting to start…</div>'
+    + '<div class="fl-log" id="fl-log">Preparing upload details…</div>'
     + '</div>';
   doc.body.appendChild(wrap);
   var statusEl = wrap.querySelector('#fl-stl');
@@ -5156,7 +5156,7 @@ def main():
   if(progPct) progPct.textContent = '{_progress_val}%';
   if(logEl){{
     var _lines = {_logs_js};
-    logEl.innerHTML = _lines && _lines.length ? _lines.join('<br>') : 'Waiting to start…';
+    logEl.innerHTML = _lines && _lines.length ? _lines.join('<br>') : 'Preparing upload details…';
     if({_error_js}) logEl.classList.add('error'); else logEl.classList.remove('error');
   }}
   if(parent._brincFloMsgs){{ parent.clearInterval(parent._brincFloMsgs); parent._brincFloMsgs = null; }}
@@ -5180,6 +5180,18 @@ def main():
                 def _push_upload_log(message):
                     _upload_logs.append(str(message))
                     return list(_upload_logs[-8:])
+
+                def _get_upload_file_label(files):
+                    _names = [
+                        str(getattr(_file, 'name', '') or '').strip()
+                        for _file in (files or [])
+                        if str(getattr(_file, 'name', '') or '').strip()
+                    ]
+                    if not _names:
+                        return "uploaded file"
+                    if len(_names) == 1:
+                        return _names[0]
+                    return f"{_names[0]} (+{len(_names) - 1} more)"
 
                 def _mark_upload_step(step_name):
                     st.session_state['_upload_crash_step'] = str(step_name)
@@ -5290,6 +5302,7 @@ def main():
                         _is_boundary_sidecar,
                         _looks_like_stations,
                     )
+                    _upload_file_label = _get_upload_file_label(call_files or uploaded_files)
                     st.session_state['boundary_overlay_gdf'] = None
                     st.session_state['boundary_overlay_name'] = ''
                     st.session_state['boundary_overlay_file'] = ''
@@ -5297,12 +5310,12 @@ def main():
                     if call_files:
                         census_auto_processed = False
                         _mark_upload_step("inspecting call files for coordinates")
-                        _push_upload_log("Starting coordinate inspection.")
+                        _push_upload_log(f"Reading {_upload_file_label}.")
                         _set_upload_overlay_status(
                             title="CAD UPLOAD",
-                            status="CHECKING FOR COORDINATES",
-                            copy="Inspecting headers and cell values for usable latitude and longitude fields. This usually takes a few seconds.",
-                            progress=8,
+                            status="READING FILE",
+                            copy=f"Opening {_upload_file_label} and checking headers for usable latitude and longitude fields.",
+                            progress=6,
                             logs=_upload_logs,
                         )
                         with st.spinner("🔍 Detecting column types in CAD export…"):
@@ -5316,6 +5329,19 @@ def main():
                             elif _pq_in > 0:
                                 _pq_yield = round(100 * _pq_out / _pq_in)
                                 _push_upload_log(f"{_pq_item['file']}: {_pq_in:,} rows in → {_pq_out:,} usable ({_pq_yield}%)")
+
+                        if df_c is not None and not df_c.empty:
+                            _push_upload_log(f"Coordinates detected in {_upload_file_label}. Skipping Census geocoding.")
+                            _set_upload_overlay_status(
+                                title="UPLOAD PROCESSING",
+                                status="COORDINATES FOUND",
+                                copy=(
+                                    f"Latitude/Longitude columns were found in {_upload_file_label}. "
+                                    f"{len(df_c):,} usable coordinate rows are moving straight to the stations workflow."
+                                ),
+                                progress=55,
+                                logs=_upload_logs,
+                            )
 
                         if df_c is None or df_c.empty:
                             _push_upload_log("No usable coordinates found. Switching to automated Census batch geocoding.")
