@@ -2749,8 +2749,8 @@ def generate_executive_summary_pdf(
         draw.text((840, 430), "Coverage summary", font=font_card, fill=(255, 255, 255))
         draw.text((816, 470), "Static PDF output preserved.", font=font_small, fill=(195, 206, 219))
         draw.text((1100, 470), "Executive summary format maintained.", font=font_small, fill=(255, 244, 196))
-        draw.text((996, 800), "A static layout is used when Chromium cannot be launched on the host.", font=font_small, fill=(210, 219, 230))
-        draw.text((736, 1140), "Coverage rings are operational estimates. This static version still downloads cleanly.", font=font_small, fill=muted)
+        draw.text((996, 800), "Map image fallback used for this export.", font=font_small, fill=(210, 219, 230))
+        draw.text((736, 1140), "Coverage rings are operational estimates. This fallback still downloads cleanly.", font=font_small, fill=muted)
 
         output = io.BytesIO()
         page.save(output, format="PDF", resolution=150.0)

@@ -10214,7 +10214,13 @@ body{{background:transparent;overflow:hidden}}
                         font=dict(color=legend_text, size=11)
                     )
                 )
-                map_html_pdf_str = fig_for_pdf_export.to_html(full_html=False, include_plotlyjs='inline', default_height='720px', default_width='100%')
+                map_html_pdf_str = fig_for_pdf_export.to_html(
+                    full_html=False,
+                    include_plotlyjs='cdn',
+                    default_height='720px',
+                    default_width='100%',
+                    config={'displayModeBar': False, 'staticPlot': True, 'responsive': True},
+                )
                 _visible_export_rows = [d for d in active_drones if not _is_call_density_station(d)]
                 station_rows = "".join(
                     f"<tr><td>{d['name']}</td><td>{d['type']}</td><td>{d['avg_time_min']:.1f} min</td><td>{d['faa_ceiling']}</td><td>${d['cost']:,}</td></tr>"
