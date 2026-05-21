@@ -1,7 +1,16 @@
 """Transient build notice rendering for authenticated users."""
+import html
 import json
 import streamlit as st
 import streamlit.components.v1 as components
+
+
+def _get_active_session_rows():
+    try:
+        from modules.admin_dashboard import _prune_active_sessions
+        return _prune_active_sessions()
+    except Exception:
+        return []
 
 
 def render_transient_build_notice(__version__, __build_datetime__, __build_timestamp__):
@@ -14,6 +23,75 @@ def render_transient_build_notice(__version__, __build_datetime__, __build_times
     ).strip().lower()
     if _notice_email != 'steven.beltran@brincdrones.com':
         return
+
+    _active_sessions = _get_active_session_rows()
+    _current_session_id = str(st.session_state.get("session_id", "") or "").strip()
+    _current_user_email = str(
+        st.session_state.get("google_user_email", "")
+        or getattr(st.user, "email", "")
+        or ""
+    ).strip().lower()
+    _current_user_name = str(
+        st.session_state.get("google_user_name", "")
+        or getattr(st.user, "name", "")
+        or (_current_user_email.split("@", 1)[0] if _current_user_email else "Current user")
+    ).strip()
+    if _current_session_id and not any(
+        str((_item.get("session_id", "") or "")).strip() == _current_session_id
+        for _item in _active_sessions
+    ):
+        _active_sessions = [
+            {
+                "session_id": _current_session_id,
+                "name": _current_user_name,
+                "email": _current_user_email,
+            },
+            *_active_sessions,
+        ]
+
+    _active_names = []
+    _seen_names = set()
+    for _item in _active_sessions:
+        _name = str((_item.get("name") or _item.get("email") or "Unknown")).strip()
+        _key = _name.lower()
+        if not _name or _key in _seen_names:
+            continue
+        _seen_names.add(_key)
+        _active_names.append(_name)
+        if len(_active_names) >= 4:
+            break
+
+    _active_count = len(_active_sessions)
+    if _active_names:
+        _active_names_html = " · ".join(
+            f'<span class="active-user-name">{html.escape(_name)}</span>'
+            for _name in _active_names
+        )
+        if _active_count > len(_active_names):
+            _active_users_line = (
+                f'<div class="active-users">'
+                f'<span class="active-users-label">Active users</span> '
+                f'<span class="active-users-count">({_active_count})</span> '
+                f'<span class="active-users-list">{_active_names_html} +{_active_count - len(_active_names)} more</span>'
+                f'</div>'
+            )
+        else:
+            _active_users_line = (
+                f'<div class="active-users">'
+                f'<span class="active-users-label">Active users</span> '
+                f'<span class="active-users-count">({_active_count})</span> '
+                f'<span class="active-users-list">{_active_names_html}</span>'
+                f'</div>'
+            )
+    else:
+        _active_users_line = (
+            '<div class="active-users">'
+            '<span class="active-users-label">Active users</span> '
+            '<span class="active-users-count">(0)</span> '
+            '<span class="active-users-list">No active sessions detected yet.</span>'
+            '</div>'
+        )
+
     components.html(
         f"""
 <!DOCTYPE html>
@@ -94,6 +172,35 @@ def render_transient_build_notice(__version__, __build_datetime__, __build_times
             letter-spacing: 0.05em;
             color: rgba(226, 232, 240, 0.82);
         }}
+        #brinc-build-notice-wrap .brinc-build-notice .active-users {{
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(74, 222, 128, 0.18);
+            font-size: 0.72rem;
+            line-height: 1.45;
+            letter-spacing: 0.03em;
+            color: rgba(226, 232, 240, 0.86);
+        }}
+        #brinc-build-notice-wrap .brinc-build-notice .active-users-label {{
+            color: rgba(191, 219, 254, 0.82);
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            font-size: 0.64rem;
+            font-weight: 800;
+        }}
+        #brinc-build-notice-wrap .brinc-build-notice .active-users-count {{
+            color: rgba(226, 232, 240, 0.88);
+            font-weight: 700;
+        }}
+        #brinc-build-notice-wrap .brinc-build-notice .active-users-list {{
+            display: block;
+            margin-top: 4px;
+        }}
+        #brinc-build-notice-wrap .brinc-build-notice .active-user-name {{
+            color: #39ff14;
+            font-weight: 900;
+            text-shadow: 0 0 10px rgba(57, 255, 20, 0.5);
+        }}
       `;
       doc.head.appendChild(style);
     }}
@@ -142,6 +249,7 @@ def render_transient_build_notice(__version__, __build_datetime__, __build_times
         <div class="version">Version ${{version}}</div>
         <div class="time">${{chicagoTime}}</div>
         <div class="relative">${{elapsedText}}</div>
+        ${_active_users_line}
       </div>
     `;
     doc.body.appendChild(wrap);
