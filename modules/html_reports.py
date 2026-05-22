@@ -80,7 +80,7 @@ def _detect_datetime_series_for_labels(df):
                 formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%m/%d/%Y %H:%M:%S', '%m/%d/%Y %H:%M', '%m/%d/%Y %I:%M %p'],
             )
 
-            if s.notna().sum() > 0:
+            if s is not None and s.notna().sum() > 0:
 
                 return s
 
@@ -91,7 +91,7 @@ def _detect_datetime_series_for_labels(df):
                 formats=['%Y-%m-%d', '%m/%d/%Y', '%m-%d-%Y', '%Y/%m/%d', '%d/%m/%Y'],
             )
 
-            if s.notna().sum() > 0:
+            if s is not None and s.notna().sum() > 0:
 
                 return s
 
@@ -118,7 +118,7 @@ def _detect_datetime_series_for_labels(df):
                     formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%m/%d/%Y %H:%M:%S', '%m/%d/%Y %H:%M', '%m/%d/%Y %I:%M %p'],
                 )
 
-                if s.notna().sum() > 0:
+                if s is not None and s.notna().sum() > 0:
 
                     return s
 

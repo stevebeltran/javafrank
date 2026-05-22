@@ -1501,18 +1501,15 @@ def _get_geocoder_provider_signature():
 def _search_address_candidates_cached(address_str, limit=6, preferred_city="", preferred_state="", provider_signature=""):
     address_str = str(address_str or '').strip()
     if not address_str:
-        try:
-            st.session_state['_last_geocode_trace'] = {
-                'input': '',
-                'preferred_city': str(preferred_city or '').strip(),
-                'preferred_state': str(preferred_state or '').strip().upper(),
-                'queries': [],
-                'providers': [],
-                'candidate_count': 0,
-            }
-        except Exception:
-            pass
-        return []
+        return [], {
+            'input': '',
+            'preferred_city': str(preferred_city or '').strip(),
+            'preferred_state': str(preferred_state or '').strip().upper(),
+            'queries': [],
+            'providers': [],
+            'candidate_count': 0,
+            'top_candidate': '',
+        }
 
     limit = max(1, min(int(limit or 6), 10))
     preferred_city = str(preferred_city or '').strip()
@@ -1783,29 +1780,31 @@ def _search_address_candidates_cached(address_str, limit=6, preferred_city="", p
     for _candidate in candidates:
         _candidate['_score'] = _candidate_score(_candidate)
     candidates.sort(key=lambda _item: (-_item.get('_score', 0), _item.get('matched_address', '')))
-    try:
-        st.session_state['_last_geocode_trace'] = {
-            'input': address_str,
-            'preferred_city': preferred_city,
-            'preferred_state': preferred_state,
-            'queries': _queries,
-            'providers': _provider_trace,
-            'candidate_count': len(candidates),
-            'top_candidate': candidates[0]['matched_address'] if candidates else '',
-        }
-    except Exception:
-        pass
-    return [{k: v for k, v in _candidate.items() if k != '_score'} for _candidate in candidates[:limit]]
+    trace = {
+        'input': address_str,
+        'preferred_city': preferred_city,
+        'preferred_state': preferred_state,
+        'queries': _queries,
+        'providers': _provider_trace,
+        'candidate_count': len(candidates),
+        'top_candidate': candidates[0]['matched_address'] if candidates else '',
+    }
+    return ([{k: v for k, v in _candidate.items() if k != '_score'} for _candidate in candidates[:limit]], trace)
 
 
 def search_address_candidates(address_str, limit=6, preferred_city="", preferred_state=""):
-    return _search_address_candidates_cached(
+    matches, trace = _search_address_candidates_cached(
         address_str,
         limit=limit,
         preferred_city=preferred_city,
         preferred_state=preferred_state,
         provider_signature=_get_geocoder_provider_signature(),
     )
+    try:
+        st.session_state['_last_geocode_trace'] = trace
+    except Exception:
+        pass
+    return matches
 
 _PUBLIC_FACILITY_QUERY_TERMS = {
     'Police': ['police department', 'police station', 'sheriff office', 'public safety'],
@@ -2005,14 +2004,34 @@ def _public_facility_candidate_score(candidate, facility_type, preferred_city=""
 
 
 @st.cache_data(show_spinner=False)
-def search_public_facility_candidates(query_str, facility_type, limit=6, preferred_city="", preferred_state=""):
+def _search_public_facility_candidates_cached(query_str, facility_type, limit=6, preferred_city="", preferred_state=""):
     query_str = str(query_str or '').strip()
     if not query_str:
-        return []
+        return [], {
+            'input': '',
+            'facility_type': '',
+            'preferred_city': str(preferred_city or '').strip(),
+            'preferred_state': str(preferred_state or '').strip().upper(),
+            'queries': [],
+            'providers': [],
+            'candidate_count': 0,
+            'top_candidate': '',
+            'public_facility_lookup': True,
+        }
 
     facility_key = _normalize_public_facility_type(facility_type)
     if not facility_key:
-        return []
+        return [], {
+            'input': query_str,
+            'facility_type': '',
+            'preferred_city': str(preferred_city or '').strip(),
+            'preferred_state': str(preferred_state or '').strip().upper(),
+            'queries': [],
+            'providers': [],
+            'candidate_count': 0,
+            'top_candidate': '',
+            'public_facility_lookup': True,
+        }
 
     limit = max(1, min(int(limit or 6), 10))
     preferred_city = str(preferred_city or '').strip()
@@ -2129,30 +2148,50 @@ def search_public_facility_candidates(query_str, facility_type, limit=6, preferr
 
     candidates.sort(key=lambda item: (-item.get('_score', 0), item.get('matched_address', '')))
 
+    trace = {
+        'input': query_str,
+        'facility_type': facility_key,
+        'preferred_city': preferred_city,
+        'preferred_state': preferred_state,
+        'queries': queries,
+        'providers': provider_trace,
+        'candidate_count': len(candidates),
+        'top_candidate': candidates[0]['matched_address'] if candidates else '',
+        'public_facility_lookup': True,
+    }
+
+    return ([{k: v for k, v in _candidate.items() if k != '_score'} for _candidate in candidates[:limit]], trace)
+
+
+def search_public_facility_candidates(query_str, facility_type, limit=6, preferred_city="", preferred_state=""):
+    matches, trace = _search_public_facility_candidates_cached(
+        query_str,
+        facility_type,
+        limit=limit,
+        preferred_city=preferred_city,
+        preferred_state=preferred_state,
+    )
     try:
-        st.session_state['_last_geocode_trace'] = {
-            'input': query_str,
-            'facility_type': facility_key,
-            'preferred_city': preferred_city,
-            'preferred_state': preferred_state,
-            'queries': queries,
-            'providers': provider_trace,
-            'candidate_count': len(candidates),
-            'top_candidate': candidates[0]['matched_address'] if candidates else '',
-            'public_facility_lookup': True,
-        }
+        st.session_state['_last_geocode_trace'] = trace
     except Exception:
         pass
+    return matches
 
-    return [{k: v for k, v in _candidate.items() if k != '_score'} for _candidate in candidates[:limit]]
+def forward_geocode(address_str):
+    return forward_geocode_with_context(
+        address_str,
+        st.session_state.get('active_city', ''),
+        st.session_state.get('active_state', ''),
+    )
+
 
 @st.cache_data(show_spinner=False)
-def forward_geocode(address_str):
+def forward_geocode_with_context(address_str, preferred_city='', preferred_state=''):
     _matches = search_address_candidates(
         address_str,
         limit=1,
-        preferred_city=st.session_state.get('active_city', ''),
-        preferred_state=st.session_state.get('active_state', ''),
+        preferred_city=preferred_city or st.session_state.get('active_city', ''),
+        preferred_state=preferred_state or st.session_state.get('active_state', ''),
     )
     if _matches:
         return float(_matches[0]['lat']), float(_matches[0]['lon'])
@@ -2197,7 +2236,7 @@ def lookup_county_for_city(city_name, state_abbr):
     """Use Nominatim reverse-geocode to find the county name for a city that
     doesn't directly match a county name in the local parquet."""
     try:
-        lat, lon = forward_geocode(f"{city_name}, {state_abbr}, USA")
+        lat, lon = forward_geocode_with_context(f"{city_name}, {state_abbr}, USA", city_name, state_abbr)
         if lat is None: return None
         url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}&zoom=8&addressdetails=1"
         req = urllib.request.Request(url, headers={'User-Agent': 'BRINC_COS_Optimizer/1.0'})
@@ -3189,23 +3228,34 @@ def _build_carrier_mini_map(cinfo, boundary_geom, center_lat, center_lon, zoom, 
 
 def _get_terrain_cache():
     """Global cache dict for DEM tiles to avoid re-downloading."""
-    return {}
+    global _TERRAIN_CACHE
+    try:
+        return _TERRAIN_CACHE
+    except NameError:
+        _TERRAIN_CACHE = {}
+        return _TERRAIN_CACHE
 
 def _estimate_elevation_simple(lat, lon, cache=None):
     """Fetch elevation for a point (cached) — fallback to 100 ft if unavailable."""
     if cache is None:
-        cache = {}
+        cache = _get_terrain_cache()
     key = (round(lat, 2), round(lon, 2))
     if key in cache:
         return cache[key]
+    elev = None
     try:
-        # Try OpenDEM API (no key required, open access)
-        import urllib.request as _ur
-        url = f"https://cloud.sdsc.edu/v1/AUTH_opentopography/Raster/SRTM_GL30/SRTM_GL30_Ellip/SRTM_GL30_Ellip_srtm.tif"
-        # Fallback: use simple rule based on typical coastal vs inland
-        elev = max(0, 100 + (lon % 1) * 50 - (lat % 1) * 30)  # Mock variation
+        _params = urllib.parse.urlencode({'locations': f'{float(lat)},{float(lon)}'})
+        _url = f"https://api.open-elevation.com/api/v1/lookup?{_params}"
+        _req = urllib.request.Request(_url, headers={'User-Agent': 'BRINC_COS_Optimizer/1.0'})
+        with urllib.request.urlopen(_req, timeout=8) as _resp:
+            _data = json.loads(_resp.read().decode('utf-8'))
+        _results = _data.get('results', []) or []
+        if _results:
+            elev = float(_results[0].get('elevation', 100.0))
     except Exception:
-        elev = 100.0  # Default 100 ft mean elevation
+        elev = None
+    if elev is None:
+        elev = max(0.0, 100.0 + (float(lon) % 1) * 50 - (float(lat) % 1) * 30)
     cache[key] = elev
     return elev
 
