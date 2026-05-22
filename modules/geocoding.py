@@ -758,12 +758,12 @@ def search_public_facility_candidates(query_str, facility_type, limit=6, preferr
     return [{k: v for k, v in _candidate.items() if k != '_score'} for _candidate in candidates[:limit]]
 
 @st.cache_data(show_spinner=False)
-def forward_geocode(address_str):
+def forward_geocode(address_str, preferred_city='', preferred_state=''):
     _matches = search_address_candidates(
         address_str,
         limit=1,
-        preferred_city=st.session_state.get('active_city', ''),
-        preferred_state=st.session_state.get('active_state', ''),
+        preferred_city=preferred_city or '',
+        preferred_state=preferred_state or '',
     )
     if _matches:
         return float(_matches[0]['lat']), float(_matches[0]['lon'])

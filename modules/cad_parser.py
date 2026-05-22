@@ -534,18 +534,6 @@ def _safe_notna_ratio(values) -> float:
     except Exception:
         return 0.0
 
-def _safe_notna_ratio(values) -> float:
-    """Return a stable non-null ratio for possibly empty parse results."""
-    try:
-        if values is None:
-            return 0.0
-        size = int(getattr(values, 'size', len(values)))
-        if size <= 0:
-            return 0.0
-        return float(pd.Series(values).notna().mean())
-    except Exception:
-        return 0.0
-
 def _extract_file_meta(raw_df, res_df, filename=""):
     """
     Compute and return a dict of data-matrix statistics from a parsed CAD upload.

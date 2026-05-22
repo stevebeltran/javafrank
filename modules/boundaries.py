@@ -51,7 +51,7 @@ def lookup_county_for_city(city_name, state_abbr):
     """Use Nominatim reverse-geocode to find the county name for a city that
     doesn't directly match a county name in the local parquet."""
     try:
-        lat, lon = forward_geocode(f"{city_name}, {state_abbr}, USA")
+        lat, lon = forward_geocode(f"{city_name}, {state_abbr}, USA", city_name, state_abbr)
         if lat is None: return None
         url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}&zoom=8&addressdetails=1"
         req = urllib.request.Request(url, headers={'User-Agent': 'BRINC_COS_Optimizer/1.0'})

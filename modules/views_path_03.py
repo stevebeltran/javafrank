@@ -181,7 +181,7 @@ def render(submit_demo, _is_boundary_sidecar, _looks_like_stations, _load_upload
             _looks_like_stations,
         )
         if _sim_unused_files:
-            st.info("Path 01 ignored non-station files: " + ", ".join(_sim_unused_files))
+            st.info("Path 03 ignored non-station files: " + ", ".join(_sim_unused_files))
         if _sim_boundary_files:
             try:
                 _overlay_file = load_simulation_boundary_overlay(

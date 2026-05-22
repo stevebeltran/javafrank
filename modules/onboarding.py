@@ -413,7 +413,7 @@ def infer_simulation_targets_from_station_file(
         address_value = str(row[addr_col]).strip() if addr_col and pd.notna(row[addr_col]) else ''
 
         if (not city_name or not state_name) and address_value:
-            lat, lon = forward_geocode(address_value)
+            lat, lon = forward_geocode(address_value, city_name, state_name)
             if lat is not None and lon is not None:
                 geocode_used = True
                 state_full, reverse_city = reverse_geocode_state(lat, lon)
@@ -878,13 +878,13 @@ def load_simulation_custom_stations(sim_uploader, active_targets, forward_geocod
         )
         station_type = str(row[type_col]) if type_col and pd.notna(row[type_col]) else 'Custom'
         station_lat, station_lon = None, None
+        city_hint = active_targets[0]['city'] if active_targets else ''
+        state_hint = active_targets[0]['state'] if active_targets else ''
 
         if lat_col and lon_col and pd.notna(row[lat_col]) and pd.notna(row[lon_col]):
             station_lat, station_lon = float(row[lat_col]), float(row[lon_col])
         elif addr_col and pd.notna(row[addr_col]):
             if search_public_facility_candidates and station_type in public_facility_types:
-                city_hint = active_targets[0]['city'] if active_targets else ''
-                state_hint = active_targets[0]['state'] if active_targets else ''
                 public_matches = search_public_facility_candidates(
                     addr_str,
                     station_type,
@@ -895,22 +895,26 @@ def load_simulation_custom_stations(sim_uploader, active_targets, forward_geocod
                 if public_matches:
                     station_lat, station_lon = float(public_matches[0]['lat']), float(public_matches[0]['lon'])
                 elif _looks_like_street_address(addr_str):
-                    station_lat, station_lon = forward_geocode(addr_str)
+                    station_lat, station_lon = forward_geocode(addr_str, city_hint, state_hint)
                     if station_lat is None and active_targets:
                         station_lat, station_lon = forward_geocode(
-                            f"{addr_str}, {active_targets[0]['city']}, {active_targets[0]['state']}"
+                            f"{addr_str}, {active_targets[0]['city']}, {active_targets[0]['state']}",
+                            active_targets[0]['city'],
+                            active_targets[0]['state'],
                         )
             else:
-                station_lat, station_lon = forward_geocode(addr_str)
+                station_lat, station_lon = forward_geocode(addr_str, city_hint, state_hint)
                 if station_lat is None and active_targets:
                     station_lat, station_lon = forward_geocode(
-                        f"{addr_str}, {active_targets[0]['city']}, {active_targets[0]['state']}"
+                        f"{addr_str}, {active_targets[0]['city']}, {active_targets[0]['state']}",
+                        active_targets[0]['city'],
+                        active_targets[0]['state'],
                     )
             if station_lat is None:
                 ungeocoded.append(addr_str)
             time.sleep(1)
 
-        if station_lat and station_lon:
+        if station_lat is not None and station_lon is not None:
             parsed_stations.append({
                 'name': station_label,
                 'lat': station_lat,
