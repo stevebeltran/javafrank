@@ -143,7 +143,7 @@ KNOWN_POPULATIONS = {
     "Spokane Valley": 102976, "Fremont": 230504, "Irvine": 307670, "San Bernardino": 222101,
     "Birmingham": 212237, "Rochester": 211328, "Chesapeake": 244835, "Norfolk": 238005,
     "Scottsdale": 258069, "North Las Vegas": 262527, "Winston-Salem": 249545,
-    "Greensboro": 301085, "Durham": 283506, "St. Petersburg": 261256, "Laredo": 255473,
+    "Greensboro": 301085, "Durham": 283506, "St. Petersburg": 261256,
     "Paradise": 193661, "Peoria": 190435, "Tempe": 192364
 }
 
