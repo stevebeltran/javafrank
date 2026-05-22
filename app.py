@@ -40,7 +40,6 @@ from PIL import Image
 
 APP_DIR = Path(__file__).resolve().parent
 MODULES_DIR = APP_DIR / "modules"
-FERNANDINA_STATIONS_CSV = Path(r"G:\My Drive\PRIVATE NO ACCESS\Python\Fernandina Beach\stations.csv")
 
 
 def _load_local_module(module_name: str):
@@ -86,13 +85,7 @@ def _load_fernandina_beach_station_rows(station_rows=None, session_state=None):
             station_df = session_state.get(key)
             if isinstance(station_df, pd.DataFrame) and not station_df.empty:
                 return station_df.to_dict("records")
-    if not FERNANDINA_STATIONS_CSV.exists():
-        return []
-    try:
-        return pd.read_csv(FERNANDINA_STATIONS_CSV).to_dict("records")
-    except Exception as exc:
-        print(f"[BRINC] Fernandina Beach station file could not be loaded: {exc}")
-        return []
+    return []
 
 # ── Module imports ────────────────────────────────────────────────────────────
 from modules.config import (
