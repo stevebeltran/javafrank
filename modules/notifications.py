@@ -6,6 +6,7 @@ import datetime
 import json
 import smtplib
 import html
+import re
 from pathlib import Path
 import streamlit as st
 from email.mime.text import MIMEText
@@ -326,7 +327,7 @@ def _notify_crash_email(step, error_message, traceback_text, details=None):
         pass
 
 
-def _notify_crash_email(step, error_message, traceback_text, details=None):
+def _notify_crash_email_html_only_legacy(step, error_message, traceback_text, details=None):
     """Send a crash alert email via Gmail."""
     try:
         gmail_address = st.secrets.get("GMAIL_ADDRESS", "")

@@ -6,11 +6,33 @@ import urllib.request
 import urllib.parse
 import math
 import random
+import concurrent.futures as cf
+import numpy as np
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point, Polygon
 from modules.config import STATE_FIPS
-from modules.boundaries import fetch_county_boundary_local, fetch_place_boundary_local, normalize_jurisdiction_name
+from modules.boundaries import (
+    fetch_county_boundary_local,
+    fetch_place_boundary_local,
+    fetch_tiger_city_shapefile,
+    normalize_jurisdiction_name,
+)
+from modules.geospatial import _count_points_within_boundary as _count_points_within_geometry
+
+SHAPEFILE_DIR = "jurisdiction_data"
+
+
+def _count_points_within_boundary(df_calls, boundary_gdf_or_geom):
+    """Count calls inside either a boundary GeoDataFrame/GeoSeries or raw geometry."""
+    boundary_geom = boundary_gdf_or_geom
+    try:
+        if hasattr(boundary_gdf_or_geom, "geometry"):
+            geometry = boundary_gdf_or_geom.geometry
+            boundary_geom = geometry.union_all() if hasattr(geometry, "union_all") else geometry.unary_union
+    except Exception:
+        boundary_geom = boundary_gdf_or_geom
+    return _count_points_within_geometry(df_calls, boundary_geom)
 
 def _select_best_boundary_for_calls(df_calls, city_text, state_abbr, prefer_county=False):
     """Try place and county boundaries and keep the candidate containing the most uploaded calls."""

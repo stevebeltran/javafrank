@@ -239,7 +239,7 @@ class CrashEvent(BaseModel):
         cause_classification: Preliminary cause assessment
     """
     event_id: str = Field(..., description="UUID format")
-    event_type: Literal["bird_strike", "motor_failure", "battery_failure", "operator_error", "parachute_failure", "weather", "signal_loss"]
+    event_type: Literal["bird_strike", "motor_failure", "battery_failure", "operator_error", "parachute_failure", "weather", "weather_event", "signal_loss"]
     drone_model: Literal["RESPONDER", "GUARDIAN"]
     lat: float = Field(..., ge=-90.0, le=90.0)
     lon: float = Field(..., ge=-180.0, le=180.0)
