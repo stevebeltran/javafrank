@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DFR Site Survey — JS</title>
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <img id="brand-logo" src="assets/brinc_logo.png" alt="BRINC">
+    <h1>DFR Site Survey <span class="tag">JS scaffold</span></h1>
+
+    <section>
+      <h2>1 · Data</h2>
+      <label class="dropzone" id="cad-drop">
+        <input type="file" id="cad-file" accept=".csv,.txt,.xlsx,.xls" multiple hidden>
+        <span>Drop CAD calls or station list<br><small>CSV / XLSX — file type auto-detected</small></span>
+      </label>
+      <button id="demo-btn" class="ghost">Load demo data</button>
+      <div id="cad-info" class="info"></div>
+      <div id="sta-info" class="info"></div>
+      <div class="legend">
+        <span><i class="dot cfs"></i> Call for service</span>
+        <span><i class="dot existing"></i> Existing</span>
+        <span><i class="dot responder"></i> Responder</span>
+        <span><i class="dot guardian"></i> Guardian</span>
+      </div>
+      <div class="row" id="dot-style-row">
+        <label>Dot style
+          <span class="radios">
+            <label><input type="radio" name="dot-style" value="1" checked> 1 · Python match</label>
+            <label><input type="radio" name="dot-style" value="2"> 2 · Glow</label>
+            <label><input type="radio" name="dot-style" value="3"> 3 · Crisp</label>
+          </span>
+        </label>
+      </div>
+    </section>
+
+    <section>
+      <h2>2 · Boundary</h2>
+      <div id="boundary-info" class="info">No boundary yet — auto-detects after CAD load.</div>
+      <label class="check"><input type="checkbox" id="boundary-filter" checked> Filter calls to boundary</label>
+      <label class="check"><input type="checkbox" id="boundary-show" checked> Show boundary</label>
+      <button id="boundary-btn" class="ghost">Re-detect boundary</button>
+    </section>
+
+    <section>
+      <h2>3 · Station Optimization</h2>
+      <div class="stype">
+        <label class="check"><input type="checkbox" id="resp-on" checked> <i class="dot responder"></i> <b>Responder</b></label>
+        <div class="row two">
+          <label>Count <output id="resp-k-out">3</output>
+            <input type="range" id="resp-k" min="0" max="10" value="3">
+          </label>
+          <label>Radius (mi)
+            <input type="number" id="resp-radius" min="0.5" max="15" step="0.5" value="2">
+          </label>
+        </div>
+      </div>
+      <div class="stype">
+        <label class="check"><input type="checkbox" id="guard-on"> <i class="dot guardian"></i> <b>Guardian</b></label>
+        <div class="row two">
+          <label>Count <output id="guard-k-out">1</output>
+            <input type="range" id="guard-k" min="0" max="10" value="1">
+          </label>
+          <label>Radius (mi)
+            <input type="number" id="guard-radius" min="1" max="25" step="0.5" value="8">
+          </label>
+        </div>
+      </div>
+      <div class="row">
+        <label>Mode
+          <select id="mode-input">
+            <option value="kmeans">K-means centroids</option>
+            <option value="greedy">Max coverage (greedy)</option>
+          </select>
+        </label>
+      </div>
+      <div class="row two" id="click-add-row">
+        <label class="check" style="align-self:end"><input type="checkbox" id="click-add"> Click map to add</label>
+        <label>Type
+          <select id="manual-type">
+            <option value="responder">Responder</option>
+            <option value="guardian">Guardian</option>
+          </select>
+        </label>
+      </div>
+      <button id="optimize-btn">Suggest stations</button>
+    </section>
+
+    <section id="metrics" class="hidden">
+      <h2>Metrics</h2>
+      <table id="metrics-table"></table>
+    </section>
+
+    <section>
+      <h2>4 · Export</h2>
+      <button id="export-btn" class="ghost">Export HTML report</button>
+    </section>
+
+    <div id="status"></div>
+  </aside>
+  <main id="map-wrap">
+    <div id="map"></div>
+    <div id="map-legend">
+      <div><i class="dot cfs"></i> Call for service</div>
+      <div><i class="dot existing"></i> Existing station</div>
+      <div><i class="dot responder"></i> Responder (ring = radius)</div>
+      <div><i class="dot guardian"></i> Guardian (ring = radius)</div>
+    </div>
+    <img id="rs-logo" src="assets/responder_station.png" alt="BRINC Responder Station">
+  </main>
+</div>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/@turf/turf@7.1.0/turf.min.js"></script>
+<script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="js/parsers.js"></script>
+<script src="js/export.js"></script>
+<script src="js/optimize.js"></script>
+<script src="js/boundary.js"></script>
+<script src="js/mapview.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
