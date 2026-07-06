@@ -32,6 +32,8 @@ body {
 #map-legend .dot.existing { background: #4caf50; }
 #map-legend .dot.responder { background: #e040fb; }
 #map-legend .dot.guardian { background: #00bcd4; }
+#map-legend .bline { display: inline-block; width: 14px; border-top: 2px dashed #ffb300; margin-right: 4px; vertical-align: 3px; }
+#map-legend .note { color: var(--muted); font-size: 11px; }
 #rs-logo {
   position: absolute; right: 16px; bottom: 28px; width: 180px;
   mix-blend-mode: screen;   /* render has a black bg — screen drops it */

@@ -23,6 +23,14 @@ const KIND_COLOR_EXPR = ['match', ['get', 'kind'],
   'existing', KIND_COLORS.existing, 'responder', KIND_COLORS.responder, KIND_COLORS.guardian];
 
 const CALL_COLOR = '#2dc8ff';
+const BOUNDARY_COLOR = '#ffb300';
+
+/* Per-station ring palette — hues kept away from the cyan call dots and the
+   amber boundary line so every ring reads as its own station. */
+const RING_PALETTE = [
+  '#ff5252', '#ab47bc', '#66bb6a', '#ffee58', '#ff8a65', '#5c6bc0',
+  '#26a69a', '#ec407a', '#d4e157', '#8d6e63', '#f48fb1', '#7e57c2',
+];
 
 /* Call dots — every point rendered (no cluster bubbles), CALL_COLOR cyan.
    Size/opacity ladders ported from app.py:7909 (Plotly size≈diameter → radius/2):
@@ -84,11 +92,11 @@ function initMap(container) {
 
     map.addLayer({
       id: 'boundary-fill', type: 'fill', source: 'boundary',
-      paint: { 'fill-color': '#29b6f6', 'fill-opacity': 0.06 },
+      paint: { 'fill-color': BOUNDARY_COLOR, 'fill-opacity': 0.06 },
     });
     map.addLayer({
       id: 'boundary-line', type: 'line', source: 'boundary',
-      paint: { 'line-color': '#29b6f6', 'line-width': 2, 'line-dasharray': [3, 2] },
+      paint: { 'line-color': BOUNDARY_COLOR, 'line-width': 2, 'line-dasharray': [3, 2] },
     });
     map.addLayer({
       id: 'calls-pts', type: 'circle', source: 'calls',
@@ -96,11 +104,11 @@ function initMap(container) {
     });
     map.addLayer({
       id: 'rings-fill', type: 'fill', source: 'rings',
-      paint: { 'fill-color': KIND_COLOR_EXPR, 'fill-opacity': 0.08 },
+      paint: { 'fill-color': ['get', 'ringColor'], 'fill-opacity': 0.08 },
     });
     map.addLayer({
       id: 'rings-line', type: 'line', source: 'rings',
-      paint: { 'line-color': KIND_COLOR_EXPR, 'line-width': 1.5, 'line-opacity': 0.8 },
+      paint: { 'line-color': ['get', 'ringColor'], 'line-width': 1.5, 'line-opacity': 0.8 },
     });
     map.addLayer({
       id: 'stations-pts', type: 'circle', source: 'stations',
@@ -151,6 +159,7 @@ function setBoundary(map, feature, visible) {
              radius: miles, perStation?: counts}] */
 function buildStationFeatures(groups) {
   const feats = [];
+  let n = 0;
   for (const g of groups) {
     g.stations.forEach((s, i) => {
       feats.push({
@@ -164,6 +173,7 @@ function buildStationFeatures(groups) {
             (g.kind === 'responder' ? `R${i + 1}` : g.kind === 'guardian' ? `G${i + 1}` : `Station ${i + 1}`),
           covers: g.perStation ? g.perStation[i] : null,
           radius: g.radius,
+          ringColor: RING_PALETTE[n++ % RING_PALETTE.length],
         },
       });
     });
@@ -179,6 +189,7 @@ function setStations(map, groups) {
     const rings = feats.map(f => {
       const ring = turf.circle(f.geometry.coordinates, f.properties.radius, { steps: 48, units: 'miles' });
       ring.properties.kind = f.properties.kind;
+      ring.properties.ringColor = f.properties.ringColor;
       return ring;
     });
     map.getSource('rings').setData({ type: 'FeatureCollection', features: rings });

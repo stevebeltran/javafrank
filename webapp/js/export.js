@@ -33,6 +33,7 @@ async function exportHtmlReport(state, groups, metricsHtml, dot) {
     features: stationFeats.features.map(f => {
       const ring = turf.circle(f.geometry.coordinates, f.properties.radius, { steps: 48, units: 'miles' });
       ring.properties.kind = f.properties.kind;
+      ring.properties.ringColor = f.properties.ringColor;
       return ring;
     }),
   };
@@ -95,6 +96,7 @@ async function exportHtmlReport(state, groups, metricsHtml, dot) {
   <div><span class="sw" style="background:#4caf50"></span>Existing station</div>
   <div><span class="sw" style="background:#e040fb"></span>Responder station</div>
   <div><span class="sw" style="background:#00bcd4"></span>Guardian station</div>
+  <div style="color:#8496a5;font-size:11px">Ring = coverage radius, unique color per station</div>
 </div>
 ${metricsHtml ? `<div class="panel" id="metrics"><table>${metricsHtml}</table></div>` : ''}
 ${rs ? `<img id="rs" src="${rs}" alt="BRINC Responder Station">` : ''}
@@ -129,8 +131,8 @@ map.addControl(new maplibregl.NavigationControl(), 'bottom-left');
 map.on('load', () => {
   if (DATA.boundary) {
     map.addSource('boundary', { type: 'geojson', data: DATA.boundary });
-    map.addLayer({ id: 'b-fill', type: 'fill', source: 'boundary', paint: { 'fill-color': '#29b6f6', 'fill-opacity': .06 } });
-    map.addLayer({ id: 'b-line', type: 'line', source: 'boundary', paint: { 'line-color': '#29b6f6', 'line-width': 2, 'line-dasharray': [3, 2] } });
+    map.addLayer({ id: 'b-fill', type: 'fill', source: 'boundary', paint: { 'fill-color': '#ffb300', 'fill-opacity': .06 } });
+    map.addLayer({ id: 'b-line', type: 'line', source: 'boundary', paint: { 'line-color': '#ffb300', 'line-width': 2, 'line-dasharray': [3, 2] } });
   }
   map.addSource('calls', { type: 'geojson', data: callsFC });
   if (DATA.dot.halo) {
@@ -143,9 +145,9 @@ map.on('load', () => {
     'circle-opacity': DATA.dot.core.opacity, 'circle-blur': DATA.dot.core.blur } });
   map.addSource('rings', { type: 'geojson', data: DATA.rings });
   map.addLayer({ id: 'rings-f', type: 'fill', source: 'rings', paint: {
-    'fill-color': KIND_COLOR, 'fill-opacity': .08 } });
+    'fill-color': ['get', 'ringColor'], 'fill-opacity': .08 } });
   map.addLayer({ id: 'rings-l', type: 'line', source: 'rings', paint: {
-    'line-color': KIND_COLOR, 'line-width': 1.5, 'line-opacity': .8 } });
+    'line-color': ['get', 'ringColor'], 'line-width': 1.5, 'line-opacity': .8 } });
   map.addSource('stations', { type: 'geojson', data: DATA.stations });
   map.addLayer({ id: 'sta', type: 'circle', source: 'stations', paint: {
     'circle-radius': 7, 'circle-color': KIND_COLOR,
