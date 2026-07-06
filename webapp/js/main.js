@@ -33,14 +33,11 @@ function activeGroups() {
   if (existing.length) {
     groups.push({ kind: 'existing', stations: existing, radius: respRadius() });
   }
-  if ($('resp-on').checked) {
-    const stations = [...byKind('responder'), ...state.suggested.responder];
-    if (stations.length) groups.push({ kind: 'responder', stations, radius: respRadius() });
-  }
-  if ($('guard-on').checked) {
-    const stations = [...byKind('guardian'), ...state.suggested.guardian];
-    if (stations.length) groups.push({ kind: 'guardian', stations, radius: guardRadius() });
-  }
+  // manual stations always display; toggles gate only the suggested sets
+  const respStations = [...byKind('responder'), ...($('resp-on').checked ? state.suggested.responder : [])];
+  if (respStations.length) groups.push({ kind: 'responder', stations: respStations, radius: respRadius() });
+  const guardStations = [...byKind('guardian'), ...($('guard-on').checked ? state.suggested.guardian : [])];
+  if (guardStations.length) groups.push({ kind: 'guardian', stations: guardStations, radius: guardRadius() });
   return groups;
 }
 
