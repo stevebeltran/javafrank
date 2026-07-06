@@ -11,10 +11,11 @@
 <div id="app">
   <aside id="sidebar">
     <img id="brand-logo" src="assets/brinc_logo.png" alt="BRINC">
-    <h1>DFR Site Survey <span class="tag">JS scaffold</span></h1>
+    <h1>DFR Site Survey</h1>
 
     <section>
-      <h2>1 · Data</h2>
+      <details id="sec-data" open>
+      <summary>1 · Data</summary>
       <label class="dropzone" id="cad-drop">
         <input type="file" id="cad-file" accept=".csv,.txt,.xlsx,.xls" multiple hidden>
         <span>Drop CAD calls or station list<br><small>CSV / XLSX — file type auto-detected</small></span>
@@ -37,14 +38,17 @@
           </span>
         </label>
       </div>
+      </details>
     </section>
 
     <section>
-      <h2>2 · Boundary</h2>
+      <details id="sec-boundary" open>
+      <summary>2 · Boundary</summary>
       <div id="boundary-info" class="info">No boundary yet — auto-detects after CAD load.</div>
       <label class="check"><input type="checkbox" id="boundary-filter" checked> Filter calls to boundary</label>
       <label class="check"><input type="checkbox" id="boundary-show" checked> Show boundary</label>
       <button id="boundary-btn" class="ghost">Re-detect boundary</button>
+      </details>
     </section>
 
     <section>

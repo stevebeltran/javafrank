@@ -86,6 +86,27 @@ function greedyMaxCoverage(points, k, radiusMiles, nCandidates = 60) {
   return chosen;
 }
 
+/* Drop geocode outliers far from the data's bulk: distance from the median
+   center beyond max(25 mi, 4×p90) is discarded. Keeps legit county-wide
+   spread, kills wrong-state geocodes. */
+function filterOutliers(points) {
+  if (points.length < 20) return { kept: points, removed: 0 };
+  const mid = arr => arr[arr.length >> 1];
+  const med = {
+    lat: mid([...points.map(p => p.lat)].sort((a, b) => a - b)),
+    lon: mid([...points.map(p => p.lon)].sort((a, b) => a - b)),
+  };
+  const { pts } = projectMiles([med, ...points]);
+  const c = pts[0];
+  const dists = pts.slice(1).map(p => Math.sqrt(dist2(p, c)));
+  const p90 = [...dists].sort((a, b) => a - b)[Math.floor(dists.length * 0.9)];
+  const limit = Math.max(25, p90 * 4);
+  const kept = [];
+  let removed = 0;
+  points.forEach((p, i) => { if (dists[i] <= limit) kept.push(p); else removed++; });
+  return { kept, removed, limitMiles: limit };
+}
+
 /* Coverage by ANY of several station groups, each with its own radius.
    groups: [{stations: [{lat,lon}], radius: miles}] */
 function unionCoverageStats(points, groups) {

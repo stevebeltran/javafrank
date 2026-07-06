@@ -62,7 +62,8 @@ function refreshCalls() {
   const dropped = state.rawCalls.length - state.calls.length;
   $('cad-info').innerHTML =
     `<b>${state.calls.length.toLocaleString()}</b> calls plotted` +
-    (dropped > 0 ? ` (${dropped.toLocaleString()} outside boundary)` : '');
+    (dropped > 0 ? ` (${dropped.toLocaleString()} outside boundary)` : '') +
+    (state.dropNote ? `<br>${state.dropNote}` : '');
 }
 
 const GROUP_TITLES = { existing: 'Existing stations', responder: 'Responder', guardian: 'Guardian' };
@@ -111,6 +112,7 @@ async function runBoundaryDetect() {
     $('boundary-info').innerHTML = `<b>${b.name}</b> (${b.kind === 'place' ? 'city/place' : b.kind})`;
     setBoundary(map, b.feature, $('boundary-show').checked);
     status(`Boundary: ${b.name}`, 'ok');
+    $('sec-boundary').open = false;
   } else {
     $('boundary-info').textContent = 'No boundary found (TIGERweb + OSM both failed).';
     status('Boundary lookup failed — showing all calls.', 'err');
@@ -221,17 +223,22 @@ async function handleDataFile(file) {
     } else {
       const { points, dropped, latCol, lonCol } = extractPoints(rows);
       if (!points.length) throw new Error('No rows with valid coordinates.');
-      state.rawCalls = points;
+      const { kept, removed } = filterOutliers(points);
+      if (!kept.length) throw new Error('All rows were coordinate outliers.');
+      state.rawCalls = kept;
       state.suggested = { responder: [], guardian: [] };
-      $('cad-info').innerHTML =
-        `<b>${points.length.toLocaleString()}</b> calls (cols: ${latCol}/${lonCol}` +
-        (dropped ? `, ${dropped} rows dropped)` : ')');
-      fitToPoints(map, points);
+      const droppedBits = [];
+      if (dropped) droppedBits.push(`${dropped.toLocaleString()} bad coords`);
+      if (removed) droppedBits.push(`${removed.toLocaleString()} outliers`);
+      state.dropNote = `cols: ${latCol}/${lonCol}` +
+        (droppedBits.length ? ` · dropped ${droppedBits.join(', ')}` : '');
+      fitToPoints(map, kept);
       refreshAll();
-      status(`Loaded ${points.length.toLocaleString()} calls.`, 'ok');
+      status(`Loaded ${kept.length.toLocaleString()} calls.`, 'ok');
       await runBoundaryDetect();
       runOptimize();
     }
+    $('sec-data').open = false;
   } catch (e) {
     status(`Parse error (${file.name}): ${e.message}`, 'err');
   }
@@ -291,6 +298,7 @@ function loadDemo() {
   fitToPoints(map, points);
   refreshAll();
   status('Demo data loaded.', 'ok');
+  $('sec-data').open = false;
   runBoundaryDetect().then(runOptimize);
 }
 
@@ -316,9 +324,15 @@ for (const [slider, out] of [['resp-k', 'resp-k-out'], ['guard-k', 'guard-k-out'
   $(slider).addEventListener('input', () => { $(out).value = $(slider).value; });
   $(slider).addEventListener('change', () => { if (state.calls.length) runOptimize(); });
 }
-for (const id of ['resp-radius', 'guard-radius', 'mode-input']) {
-  $(id).addEventListener('change', () => { if (state.calls.length) runOptimize(); });
+// radius edits always re-draw rings (manual stations too), re-optimize when calls exist
+for (const id of ['resp-radius', 'guard-radius']) {
+  $(id).addEventListener('change', () => {
+    if (state.calls.length) runOptimize();
+    else refreshStationsAndMetrics();
+  });
+  $(id).addEventListener('input', () => refreshStationsAndMetrics());
 }
+$('mode-input').addEventListener('change', () => { if (state.calls.length) runOptimize(); });
 // toggles: recompute only if that type has no suggestions yet, else just re-render
 for (const id of ['resp-on', 'guard-on']) {
   $(id).addEventListener('change', () => {
