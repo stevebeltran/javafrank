@@ -307,8 +307,7 @@ function loadDemo() {
 async function runExport() {
   if (!state.calls.length) { status('Load CAD calls first.', 'err'); return; }
   status('Building HTML report…');
-  const dot = DOT_STYLES[map.__dotStyle || 1](state.calls.length);
-  const n = await exportHtmlReport(state, activeGroups(), $('metrics-table').innerHTML, dot);
+  const n = await exportHtmlReport(state, activeGroups(), $('metrics-table').innerHTML, dotStyle(state.calls.length));
   status(`Exported HTML report (${n.toLocaleString()} calls).`, 'ok');
 }
 
@@ -351,9 +350,6 @@ $('boundary-show').addEventListener('change', () => {
 $('click-add').addEventListener('change', () => {
   map.getCanvas().style.cursor = $('click-add').checked ? 'crosshair' : '';
 });
-for (const radio of document.querySelectorAll('input[name="dot-style"]')) {
-  radio.addEventListener('change', () => applyDotStyle(map, parseInt(radio.value, 10)));
-}
 
 window.app = { state, map, loadDemo, runOptimize, runBoundaryDetect, activeGroups };  // debug/test hook
 status('Ready. Load a CAD file or demo data.');

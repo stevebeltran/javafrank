@@ -24,47 +24,24 @@ const KIND_COLOR_EXPR = ['match', ['get', 'kind'],
 
 const CALL_COLOR = '#2dc8ff';
 
-/* Dot styles — all render every point (no cluster bubbles), CALL_COLOR cyan.
-   Size/opacity ladders ported from app.py:7909 (Plotly size≈diameter → radius/2). */
+/* Call dots — every point rendered (no cluster bubbles), CALL_COLOR cyan.
+   Size/opacity ladders ported from app.py:7909 (Plotly size≈diameter → radius/2):
+   translucent density cloud, adaptive to call volume. */
 function pySize(n) { return n > 150000 ? 2 : n > 50000 ? 3 : n > 20000 ? 4 : 5; }
 function pyOpacity(n) {
   return n > 150000 ? 0.06 : n > 50000 ? 0.10 : n > 20000 ? 0.18 : n > 10000 ? 0.28 : 0.4;
 }
 
-const DOT_STYLES = {
-  // 1 — Python match: fixed adaptive size + heavy alpha blending (density cloud)
-  1: n => ({
-    core: { radius: pySize(n) / 2 + 0.6, opacity: pyOpacity(n), blur: 0 },
-    halo: null,
-  }),
-  // 2 — Glow: soft halo under a brighter core; densities bloom like a heatmap
-  2: n => ({
-    core: { radius: Math.max(1.2, pySize(n) / 2), opacity: Math.min(0.55, pyOpacity(n) * 3), blur: 0 },
-    halo: { radius: pySize(n) * 1.8, opacity: Math.max(0.04, pyOpacity(n) / 2), blur: 1 },
-  }),
-  // 3 — Crisp: constant small dots, zoom-scaled, higher opacity
-  3: () => ({
-    core: { radius: ['interpolate', ['linear'], ['zoom'], 8, 1.3, 12, 2.4, 15, 4.5], opacity: 0.45, blur: 0 },
-    halo: null,
-  }),
-};
+function dotStyle(n) {
+  return { core: { radius: pySize(n) / 2 + 0.6, opacity: pyOpacity(n), blur: 0 }, halo: null };
+}
 
-function applyDotStyle(map, styleId) {
+function applyDotStyle(map) {
   whenMapReady(map, () => {
-    const n = map.__callCount || 0;
-    const s = DOT_STYLES[styleId](n);
+    const s = dotStyle(map.__callCount || 0);
     map.setPaintProperty('calls-pts', 'circle-radius', s.core.radius);
     map.setPaintProperty('calls-pts', 'circle-opacity', s.core.opacity);
     map.setPaintProperty('calls-pts', 'circle-blur', s.core.blur);
-    if (s.halo) {
-      map.setPaintProperty('calls-halo', 'circle-radius', s.halo.radius);
-      map.setPaintProperty('calls-halo', 'circle-opacity', s.halo.opacity);
-      map.setPaintProperty('calls-halo', 'circle-blur', s.halo.blur);
-      map.setLayoutProperty('calls-halo', 'visibility', 'visible');
-    } else {
-      map.setLayoutProperty('calls-halo', 'visibility', 'none');
-    }
-    map.__dotStyle = styleId;
   });
 }
 
@@ -114,11 +91,6 @@ function initMap(container) {
       paint: { 'line-color': '#29b6f6', 'line-width': 2, 'line-dasharray': [3, 2] },
     });
     map.addLayer({
-      id: 'calls-halo', type: 'circle', source: 'calls',
-      layout: { visibility: 'none' },
-      paint: { 'circle-radius': 6, 'circle-color': CALL_COLOR, 'circle-opacity': 0.05, 'circle-blur': 1 },
-    });
-    map.addLayer({
       id: 'calls-pts', type: 'circle', source: 'calls',
       paint: { 'circle-radius': 2.5, 'circle-color': CALL_COLOR, 'circle-opacity': 0.4 },
     });
@@ -162,7 +134,7 @@ function setCalls(map, points) {
   whenMapReady(map, () => {
     map.__callCount = points.length;
     map.getSource('calls').setData(pointsToGeoJSON(points));
-    applyDotStyle(map, map.__dotStyle || 1);
+    applyDotStyle(map);
   });
 }
 
