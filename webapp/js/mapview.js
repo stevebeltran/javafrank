@@ -103,10 +103,6 @@ function initMap(container) {
       paint: { 'circle-radius': 2.5, 'circle-color': CALL_COLOR, 'circle-opacity': 0.4 },
     });
     map.addLayer({
-      id: 'rings-fill', type: 'fill', source: 'rings',
-      paint: { 'fill-color': ['get', 'ringColor'], 'fill-opacity': 0.08 },
-    });
-    map.addLayer({
       id: 'rings-line', type: 'line', source: 'rings',
       paint: { 'line-color': ['get', 'ringColor'], 'line-width': 1.5, 'line-opacity': 0.8 },
     });

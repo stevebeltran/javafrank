@@ -99,23 +99,47 @@ function medianCenter(points) {
   return { lat: mid(lats), lon: mid(lons) };
 }
 
-/* Returns {feature, name, kind} or null. */
+/* Fraction of calls (sampled, ≤1500) inside a boundary — cheap test for
+   "is this polygon actually the jurisdiction that produced these calls?" */
+function boundaryCoverageFrac(points, feature) {
+  if (!points.length) return 0;
+  let f = feature;
+  try { f = turf.simplify(feature, { tolerance: 0.001, highQuality: false }); } catch {}
+  const step = Math.max(1, Math.floor(points.length / 1500));
+  let hit = 0, tot = 0;
+  for (let i = 0; i < points.length; i += step) {
+    tot++;
+    if (turf.booleanPointInPolygon([points[i].lon, points[i].lat], f)) hit++;
+  }
+  return hit / tot;
+}
+
+/* Returns {feature, name, kind} or null. Prefers the city/place polygon, but
+   county sheriff / parish CAD data usually centers inside some incorporated
+   city — when the place covers under half the calls, fall back to whichever
+   of place/county actually contains more of them. */
 async function detectBoundary(points) {
   const c = medianCenter(points);
+  let place = null;
   try {
     const placeLayer = await tigerFindLayer('Places_CouSub_ConCity_SubMCD', /incorporated places/i);
     if (placeLayer !== null) {
       const f = await tigerQueryPoint('Places_CouSub_ConCity_SubMCD', placeLayer, c.lat, c.lon);
-      if (f) return { feature: f, name: f.properties.NAME, kind: 'place' };
+      if (f) place = { feature: f, name: f.properties.NAME, kind: 'place' };
     }
   } catch (e) { console.warn('TIGER place lookup failed', e); }
+  const placeFrac = place ? boundaryCoverageFrac(points, place.feature) : 0;
+  if (place && placeFrac >= 0.5) return place;
   try {
     const countyLayer = await tigerFindLayer('State_County', /^counties$/i);
     if (countyLayer !== null) {
       const f = await tigerQueryPoint('State_County', countyLayer, c.lat, c.lon);
-      if (f) return { feature: f, name: f.properties.NAME, kind: 'county' };
+      if (f && boundaryCoverageFrac(points, f) > placeFrac) {
+        return { feature: f, name: f.properties.NAME, kind: 'county' };
+      }
     }
   } catch (e) { console.warn('TIGER county lookup failed', e); }
+  if (place) return place;
   try {
     const f = await nominatimBoundary(c.lat, c.lon);
     if (f) return { feature: f, name: f.properties.NAME, kind: 'osm' };

@@ -279,9 +279,10 @@ function genPointsInBoundary(feature, n) {
     }
     return { lat: (minY + maxY) / 2, lon: (minX + maxX) / 2 };
   };
-  const s = Math.min(maxX - minX, maxY - minY) * 0.08;
+  // half the calls cluster around hotspots, half scatter across the whole city
+  const s = Math.min(maxX - minX, maxY - minY) * 0.12;
   const hotspots = [
-    { ...rndInside(), w: 0.4 }, { ...rndInside(), w: 0.3 }, { ...rndInside(), w: 0.2 },
+    { ...rndInside(), w: 0.2 }, { ...rndInside(), w: 0.15 }, { ...rndInside(), w: 0.15 },
   ];
   const points = [];
   let attempts = 0;

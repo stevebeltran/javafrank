@@ -144,8 +144,6 @@ map.on('load', () => {
     'circle-radius': DATA.dot.core.radius, 'circle-color': CALL_COLOR,
     'circle-opacity': DATA.dot.core.opacity, 'circle-blur': DATA.dot.core.blur } });
   map.addSource('rings', { type: 'geojson', data: DATA.rings });
-  map.addLayer({ id: 'rings-f', type: 'fill', source: 'rings', paint: {
-    'fill-color': ['get', 'ringColor'], 'fill-opacity': .08 } });
   map.addLayer({ id: 'rings-l', type: 'line', source: 'rings', paint: {
     'line-color': ['get', 'ringColor'], 'line-width': 1.5, 'line-opacity': .8 } });
   map.addSource('stations', { type: 'geojson', data: DATA.stations });
