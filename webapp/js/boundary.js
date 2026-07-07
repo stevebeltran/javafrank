@@ -75,6 +75,23 @@ async function nominatimBoundary(lat, lon) {
   return null;
 }
 
+/* Forward geocode "City, ST" → boundary polygon + population (when OSM has it).
+   Returns {feature, name, population|null} or null. */
+async function geocodeCity(query) {
+  const url = 'https://nominatim.openstreetmap.org/search?' + new URLSearchParams({
+    q: `${query}, USA`, format: 'jsonv2', polygon_geojson: '1', extratags: '1', limit: '1',
+  });
+  const data = await fetchJsonRetry(url);
+  const hit = (data || [])[0];
+  if (!hit || !hit.geojson || !/polygon/i.test(hit.geojson.type)) return null;
+  const population = (hit.extratags && parseInt(hit.extratags.population, 10)) || null;
+  return {
+    feature: { type: 'Feature', properties: { NAME: hit.name || hit.display_name }, geometry: hit.geojson },
+    name: hit.name || query,
+    population,
+  };
+}
+
 function medianCenter(points) {
   const lats = points.map(p => p.lat).sort((a, b) => a - b);
   const lons = points.map(p => p.lon).sort((a, b) => a - b);

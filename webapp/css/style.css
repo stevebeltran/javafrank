@@ -95,7 +95,8 @@ button:disabled { opacity: .4; cursor: default; }
 .row.two { display: flex; gap: 8px; }
 .row.two label { flex: 1; }
 input[type=range] { width: 100%; accent-color: var(--accent); }
-input[type=number], select {
+#demo-city { margin-top: 8px; }
+input[type=number], input[type=text], select {
   width: 100%; padding: 5px 6px; margin-top: 2px;
   background: var(--bg); color: var(--text);
   border: 1px solid var(--border); border-radius: 5px;

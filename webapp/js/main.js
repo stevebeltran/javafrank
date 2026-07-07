@@ -261,7 +261,83 @@ function wireDropzone(zoneId, inputId, handler) {
 
 /* ---------- demo data ---------- */
 
+/* Seeded synthetic calls inside a boundary polygon — 3 hotspots + uniform noise. */
+function genPointsInBoundary(feature, n) {
+  const [minX, minY, maxX, maxY] = turf.bbox(feature);
+  // OSM city polygons can have 10k+ vertices — simplify for the containment
+  // test only (display still uses the full-detail boundary)
+  let testPoly = feature;
+  try { testPoly = turf.simplify(feature, { tolerance: 0.001, highQuality: false }); } catch {}
+  let seed = 42;
+  const rand = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+  const gauss = () => (rand() + rand() + rand() + rand() - 2) / 2;
+  const inPoly = (lat, lon) => turf.booleanPointInPolygon([lon, lat], testPoly);
+  const rndInside = () => {
+    for (let t = 0; t < 200; t++) {
+      const lat = minY + rand() * (maxY - minY), lon = minX + rand() * (maxX - minX);
+      if (inPoly(lat, lon)) return { lat, lon };
+    }
+    return { lat: (minY + maxY) / 2, lon: (minX + maxX) / 2 };
+  };
+  const s = Math.min(maxX - minX, maxY - minY) * 0.08;
+  const hotspots = [
+    { ...rndInside(), w: 0.4 }, { ...rndInside(), w: 0.3 }, { ...rndInside(), w: 0.2 },
+  ];
+  const points = [];
+  let attempts = 0;
+  while (points.length < n && attempts++ < n * 20) {
+    const r = rand();
+    let acc = 0, h = null;
+    for (const hs of hotspots) { acc += hs.w; if (r < acc) { h = hs; break; } }
+    const agency = rand() < 0.7 ? 'police' : (rand() < 0.7 ? 'fire' : 'ems');
+    let lat, lon;
+    if (h) {
+      lat = h.lat + gauss() * s; lon = h.lon + gauss() * s * 1.3;
+      if (!inPoly(lat, lon)) continue;    // hotspot spill outside boundary — reject
+    } else {
+      ({ lat, lon } = rndInside());
+    }
+    points.push({ lat, lon, agency });
+  }
+  return points;
+}
+
+/* Demo for an arbitrary US city — geocode boundary, estimate volume from
+   OSM population when available (60% rule of thumb), fall back to 100k pop. */
+async function loadDemoCity(query) {
+  status(`Looking up ${query}…`);
+  try {
+    const geo = await geocodeCity(query);
+    if (!geo) { status(`No boundary found for "${query}" — try "City, ST".`, 'err'); return; }
+    const pop = geo.population || 100000;
+    const callCount = Math.min(Math.round(pop * 0.6), 150000);
+    status(`Generating ${callCount.toLocaleString()} demo calls for ${geo.name}…`);
+    const points = genPointsInBoundary(geo.feature, callCount);
+    state.rawCalls = points;
+    state.suggested = { responder: [], guardian: [] };
+    state.dropNote = geo.population
+      ? `demo: 60% of pop. ${geo.population.toLocaleString()}`
+      : 'demo: pop. unknown — assumed 100,000';
+    const c = turf.centerOfMass(geo.feature).geometry.coordinates;
+    state.stations = [{ lat: c[1], lon: c[0], name: 'HQ', kind: 'existing', id: ++stationSeq }];
+    state.boundary = { feature: geo.feature, name: geo.name, kind: 'osm' };
+    setBoundary(map, geo.feature, $('boundary-show').checked);
+    $('boundary-info').innerHTML = `<b>${geo.name}</b> (demo boundary)`;
+    $('sta-info').innerHTML = '<b>1</b> demo station (HQ)';
+    fitToPoints(map, points);
+    refreshAll();
+    status(`Demo data loaded for ${geo.name}.`, 'ok');
+    $('sec-data').open = false;
+    $('sec-boundary').open = false;
+    runOptimize();
+  } catch (e) {
+    status(`Demo lookup failed: ${e.message}`, 'err');
+  }
+}
+
 function loadDemo() {
+  const q = $('demo-city').value.trim();
+  if (q) { loadDemoCity(q); return; }
   // Synthetic calls clustered around Naperville, IL — 3 hotspots + uniform noise.
   // Annual CFS volume modeled as 60% of city population (DFR rule of thumb).
   const NAPERVILLE_POP = 149540;
@@ -312,6 +388,7 @@ async function runExport() {
 
 wireDropzone('cad-drop', 'cad-file', handleFiles);
 $('demo-btn').addEventListener('click', loadDemo);
+$('demo-city').addEventListener('keydown', e => { if (e.key === 'Enter') loadDemo(); });
 $('export-btn').addEventListener('click', runExport);
 $('boundary-btn').addEventListener('click', runBoundaryDetect);
 $('optimize-btn').addEventListener('click', runOptimize);
